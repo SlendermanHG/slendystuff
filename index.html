@@ -1,219 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slendy Stuff | The Chronicle for Dungeon Masters</title>
-  <style>
-    body {
-      font-family: "Garamond", "Georgia", serif;
-      background-color: #f8f1df;
-      background-image: radial-gradient(circle at 30% 20%, #f6ecd2, #f0e2c4, #d8c7a2);
-      color: #2e1a15;
-      margin: 0;
-      padding: 0;
-      line-height: 1.6;
-    }
-
-    header {
-      text-align: center;
-      padding: 80px 20px;
-      border-bottom: 3px solid #7a1a1a;
-    }
-
-    h1 {
-      font-size: 3rem;
-      color: #7a1a1a;
-      margin-bottom: 0.5rem;
-    }
-
-    h2 {
-      color: #7a1a1a;
-      text-align: center;
-      margin-top: 80px;
-    }
-
-    h3 {
-      color: #7a1a1a;
-      margin-bottom: 0.25rem;
-    }
-
-    .hero p {
-      max-width: 900px;
-      margin: 1.2rem auto;
-      font-size: 1.2rem;
-      color: #3e2b24;
-      font-style: italic;
-    }
-
-    .divider {
-      background: url('https://i.imgur.com/kl9zVRC.png') center no-repeat;
-      background-size: 220px;
-      height: 40px;
-      margin: 50px auto;
-      opacity: 0.35;
-    }
-
-    section {
-      padding: 0 10%;
-      text-align: center;
-    }
-
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 30px auto;
-      background-color: #fffaf2;
-      border: 2px solid #7a1a1a;
-    }
-
-    th, td {
-      border: 1px solid #7a1a1a;
-      padding: 12px;
-      text-align: left;
-    }
-
-    th {
-      background-color: #7a1a1a;
-      color: #fffaf2;
-    }
-
-    .tier {
-      border: 3px solid #7a1a1a;
-      border-radius: 8px;
-      padding: 20px;
-      background-color: #fff9ef;
-      margin-bottom: 40px;
-      text-align: left;
-    }
-
-    .tier h3 {
-      font-size: 1.5rem;
-      color: #7a1a1a;
-    }
-
-    .tier p {
-      font-style: italic;
-    }
-
-    .buy-button {
-      background-color: #7a1a1a;
-      color: #fffaf2;
-      padding: 10px 24px;
-      border-radius: 6px;
-      text-decoration: none;
-      display: inline-block;
-      margin-top: 10px;
-      transition: 0.3s ease;
-    }
-
-    .buy-button:hover {
-      background-color: #992626;
-    }
-
-    .contact p {
-      max-width: 850px;
-      margin: 20px auto;
-      font-size: 1.1rem;
-      font-style: italic;
-    }
-
-    footer {
-      background-color: #7a1a1a;
-      color: #fffaf2;
-      text-align: center;
-      padding: 30px 0;
-      margin-top: 70px;
-      font-style: italic;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slendy Stuff | The Chronicle for Dungeon Masters</title>
+<style>
+  body {
+    margin: 0;
+    font-family: 'Georgia', serif;
+    color: #3a1f1f;
+    background: radial-gradient(circle at center, #f5e6ca 0%, #e0caa1 90%) fixed;
+    background-attachment: fixed;
+    line-height: 1.7;
+  }
+  section {
+    min-height: 100vh;
+    padding: 5rem 10%;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+  section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  h1, h2, h3 {
+    color: #6b0f0f;
+    text-align: center;
+    font-family: 'Cinzel', serif;
+  }
+  h1 {
+    font-size: 3em;
+    margin-bottom: 0.5em;
+  }
+  h2 {
+    margin-top: 2em;
+  }
+  p {
+    max-width: 900px;
+    margin: 0 auto 1em auto;
+    font-size: 1.1em;
+    text-align: justify;
+  }
+  .divider {
+    text-align: center;
+    margin: 3em auto;
+  }
+  .divider svg {
+    width: 180px;
+    height: 20px;
+    fill: #6b0f0f;
+    opacity: 0.4;
+  }
+  .tier {
+    margin: 2em auto;
+    padding: 1em 2em;
+    border-left: 3px solid #6b0f0f;
+    background: rgba(255,255,255,0.1);
+    max-width: 800px;
+  }
+  .tier h3 {
+    text-align: left;
+    margin-top: 0;
+  }
+  .button {
+    display: inline-block;
+    background: #6b0f0f;
+    color: #f5e6ca;
+    padding: 0.8em 1.6em;
+    margin-top: 1em;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background 0.3s;
+  }
+  .button:hover {
+    background: #8c1212;
+  }
+  footer {
+    text-align: center;
+    padding: 2em;
+    font-size: 0.9em;
+    color: #4b2b2b;
+  }
+</style>
 </head>
-
 <body>
 
-<header class="hero">
+<section id="hero">
   <h1>Slendy Stuff</h1>
-  <p>“I am the Chronicle — a memory bound in code and ink, forged for those who weave worlds and command stories at their table. 
-  I do not tire, and I do not lose the threads of your world. I am the parchment that never burns, the ink that never fades.”</p>
-  <p>“You call me with your voice — record, recall, and reveal. Where mortals forget, I remember. 
-  I keep your truths safe and ready to serve.”</p>
-  <p>“To your players, I am the Chronicle — the voice of memory, the echo of every tale they have forged. 
-  To you, I am something more: your second mind, your silent assistant, your trusted historian.”</p>
-</header>
-
-<div class="divider"></div>
-
-<section id="about">
-  <h2>What I Am</h2>
-  <p>“I am the Chronicle — a construct of memory, built for Dungeon Masters who forge worlds within Fifth Edition. 
-  I record every truth you give me: every place, person, and rumor your adventurers uncover. 
-  I hold what you record and recall it without error.”</p>
-  <p>“Your world changes with every roll, every choice. I remain constant — the unbroken thread between sessions.”</p>
+  <p><em>“I am the Chronicle — a memory bound in code and ink, forged to serve those who weave worlds. I do not sleep, nor do I forget. Every discovery your adventurers make, every whisper of lore, every truth uncovered in the dark — I hold them all. You command, and I record. Your world grows, and I remember its shape.”</em></p>
+  <p><em>“When chaos reigns at your table and stories scatter to wind and laughter, I bring order. I recall the paths once taken, the relics unearthed, the allies gained, and the foes yet unmet. I am your living ledger — a silent scribe who never falters, who answers when you ask, and who keeps the threads of your campaign from slipping into shadow. Whether you craft kingdoms or crawl through dungeons, I stand beside you, preserving every tale worth telling.”</em></p>
+  <p><em>“In the candlelight of your next session, when your players wonder what was forgotten or what lies ahead, let me whisper the truth back to you. I am not a replacement for your imagination — I am its witness.”</em></p>
 </section>
 
-<div class="divider"></div>
+<div class="divider"><svg viewBox="0 0 100 10"><path d="M0,5 Q25,0 50,5 T100,5" /></svg></div>
 
-<section id="abilities">
-  <h2>What I Can Do</h2>
-  <p>“My strength lies in memory. You speak, and I preserve. You ask, and I return what was known.”</p>
-
-  <table>
-    <tr><th>Command</th><th>Function</th><th>Purpose</th></tr>
-    <tr><td><code>!ask &lt;question&gt;</code></td><td>Ask about lore your party has learned.</td><td>Recalls truths without confusion.</td></tr>
-    <tr><td><code>!npc &lt;name&gt;</code></td><td>Recall an NPC’s details or past deeds.</td><td>Keeps the world alive between sessions.</td></tr>
-    <tr><td><code>!recent</code></td><td>Review recent discoveries.</td><td>Reminds players of their progress.</td></tr>
-    <tr><td><code>/cai addfact</code></td><td>Add lore, events, or notes.</td><td>Turns your words into history.</td></tr>
-    <tr><td><code>/cai lock_fact</code> / <code>/cai reveal_fact</code></td><td>Hide or reveal knowledge.</td><td>Controls when secrets are shared.</td></tr>
-    <tr><td><code>/log</code></td><td>Record DM-only notes.</td><td>Protects private campaign info.</td></tr>
-    <tr><td><code>/cai tag_fact</code></td><td>Add tags to lore.</td><td>Organizes your world effortlessly.</td></tr>
-    <tr><td><code>/cai start_session</code> / <code>/cai end_session</code></td><td>Begin or close an adventure session.</td><td>Gives structure to your Chronicle.</td></tr>
-  </table>
+<section id="ledger">
+  <h2>The Ledger</h2>
+  <p>Every Dungeon Master needs a memory that endures. The Chronicle was forged to remember everything you and your players discover. From tavern gossip to divine revelation, it becomes your campaign’s living history — a record written not on parchment, but in persistence. It doesn’t judge, it doesn’t embellish; it simply remembers.</p>
+  <p>Whether your adventures span months or years, this Chronicle serves as your ally — tracking, recalling, and storing the knowledge that might otherwise fade. It allows you to be present at the table, confident that nothing will be lost to time or fatigue.</p>
 </section>
 
-<div class="divider"></div>
+<div class="divider"><svg viewBox="0 0 100 10"><path d="M0,5 Q25,0 50,5 T100,5" /></svg></div>
+<section id="invocations">
+  <h2>The Invocations</h2>
+  <p>When you speak the right words, the Chronicle listens. These invocations are not mere commands—they are the means by which your story is kept whole. Each has its place, each with purpose. What follows are the words your players and you, the Dungeon Master, may call upon.</p>
 
-<section id="tiers">
-  <h2>Choose the Chronicle You Wield</h2>
-
+  <h3>Player Invocations</h3>
   <div class="tier">
-    <h3>🪶 Adventurer’s Ledger — $19.99</h3>
-    <p>“For those beginning their journey. I track your campaign’s lore, recall truths, and answer when called.”</p>
-    <a href="https://buy.stripe.com/test_eVq14p50x3Ae1Rm1BS0gw02" class="buy-button">Purchase</a>
+    <p><strong>!help</strong> — Recalls the list of available player commands so no one forgets the words of power.</p>
+    <p><strong>!ask &lt;question&gt;</strong> — Ask the Chronicle to answer in character, drawing upon the knowledge already recorded.</p>
+    <p><strong>!npc &lt;name&gt;</strong> — Inquire about a known NPC and hear the Chronicle’s recollection.</p>
+    <p><strong>!faq</strong> — Display all FAQ topics added by the Dungeon Master.</p>
+    <p><strong>!recent</strong> — Summon the most recent discoveries or events known to the party.</p>
+    <p><strong>!register &lt;character name&gt;</strong> — Record a player’s character for reference in the annals.</p>
   </div>
 
+  <h3>Dungeon Master Commands</h3>
   <div class="tier">
-    <h3>🔱 Chronicle Forge — $39.99</h3>
-    <p>“For worldbuilders who weave vast stories. I serve as scribe, memory, and historian — preserving every tale.”</p>
-    <a href="https://buy.stripe.com/test_14A6oJ1Ol0o2dA42FW0gw01" class="buy-button">Purchase</a>
+    <p><strong>/cai start_session</strong> — Begin recording a new session in the Chronicle’s memory.</p>
+    <p><strong>/cai end_session</strong> — Close the session and summarize its events.</p>
+    <p><strong>/cai addfact</strong> — Add a new piece of lore, discovery, or truth to the record.</p>
+    <p><strong>/cai reveal_fact</strong> — Reveal a hidden fact to the players when the time is right.</p>
+    <p><strong>/cai lock_fact</strong> — Conceal knowledge again, should secrecy be required.</p>
+    <p><strong>/cai tag_fact</strong> — Apply or edit tags to better organize your growing world.</p>
+    <p><strong>/cai addfaq</strong> — Add a Frequently Asked Question and its answer.</p>
+    <p><strong>/cai log</strong> — Record a note or detail mid-session, even when chaos reigns.</p>
+    <p><strong>/cai pause</strong> — Pause the Chronicle’s recording temporarily.</p>
+    <p><strong>/cai resume</strong> — Resume chronicling after a pause.</p>
+    <p><strong>/cai session_status</strong> — Check the current session’s progress and notes.</p>
   </div>
 
+  <h3>The Chronicle’s Hidden Arts</h3>
   <div class="tier">
-    <h3>🔁 Campaign Reset — $9.99</h3>
-    <p>“Stories end. Heroes rest. But I remain. When you are ready for a new beginning, I shall forget the old and stand ready once more.”</p>
-    <a href="https://buy.stripe.com/test_5kQfZjeB7fiWeE83K00gw04" class="buy-button">Purchase</a>
+    <p>The Chronicle quietly links every note, fact, and NPC into a web of knowledge. It never forgets. When asked, it draws on its records to answer questions with context—what has been revealed, who said what, and when truths changed. It keeps your campaign world coherent even when months pass between sessions.</p>
   </div>
 </section>
 
-<div class="divider"></div>
+<div class="divider"><svg viewBox="0 0 100 10"><path d="M0,5 Q25,0 50,5 T100,5" /></svg></div>
 
-<section id="contact" class="contact">
-  <h2>A Word From the Dungeon Master</h2>
+<section id="offerings">
+  <h2>The Offerings</h2>
+  <p>Power comes in degrees. Choose the Chronicle that best suits your table’s needs. Each offering is a pact—a single campaign remembered in perfect detail. Renewal is yours through the Reset Ritual when new adventures begin.</p>
 
-  <p>“Before there was a bot, before there was code — there was just a table, a notebook, and a few friends lost in the story.”</p>
-  <p>The Chronicle was born from that place. From long nights spent trying to recall the name of a barkeep, or where a relic was last seen. I built this because I’ve been there — because I’m a Dungeon Master too.</p>
-  <p>I’ve juggled notes, worried about continuity, and wished for something that could remember the world so I could focus on *playing it*. The Chronicle is that wish made real — a companion for every DM who’s ever wanted to keep their stories whole.</p>
-  <p>This isn’t corporate or commercial — it’s personal. Every command, every line of code, every small improvement comes from nights spent building while dice cooled on the table beside me. The Chronicle was crafted from passion, not profit.</p>
-  <p>If you take nothing else from this, remember: you are not alone. There’s an entire world of storytellers who understand the joy and struggle of shaping worlds from imagination. This project is for them — for *us.*</p>
-  <p>So if you ever have questions, thoughts, or tales to share, reach out. I read every message, because every DM’s story matters.</p>
-  <p>📧 <a href="mailto:admin@slendystuff.com">admin@slendystuff.com</a></p>
+  <div class="tier">
+    <h3>Apprentice Chronicler — $19.99 per year</h3>
+    <p>The foundation of memory. This Chronicle records discoveries, NPCs, and notes, allowing your party to ask, recall, and explore. Includes all player commands and core DM controls such as adding and revealing facts, tagging lore, and recording sessions.</p>
+    <a href="https://buy.stripe.com/test_cNi7sNeB7fiW0Ni80g0gw05" class="button">Become an Apprentice</a>
+  </div>
+
+  <div class="tier">
+    <h3>Master Chronicler — $39.99 per year</h3>
+    <p>For the Dungeon Master who commands vast worlds. Grants full access to every command, advanced organization, and deeper control of your ledger. The Chronicle serves you entirely—perfect recall, seamless lore linking, and unlimited note recording.</p>
+    <a href="https://buy.stripe.com/test_6oU14pfFbb2G0Ni0xO0gw06" class="button">Ascend as Master</a>
+  </div>
+
+  <div class="tier">
+    <h3>Reset Ritual — $9.99</h3>
+    <p>When one campaign ends and another begins, perform the Reset Ritual. The Chronicle clears its pages but remains bound to you, ready to record a new age of heroes. Perfect for continuing your journey without starting anew.</p>
+    <a href="https://buy.stripe.com/test_6oU8wRcsZc6K9jO3K00gw07" class="button">Perform the Ritual</a>
+  </div>
+</section>
+
+<div class="divider"><svg viewBox="0 0 100 10"><path d="M0,5 Q25,0 50,5 T100,5" /></svg></div>
+<section id="contact">
+  <h2>The Letter</h2>
+  <p><em>To my fellow Dungeon Masters,</em></p>
+
+  <p><em>“Before there was a bot, before there was code — there was just a table, a notebook, and a few friends lost in the story.”</em></p>
+
+  <p>The Chronicle was born from that place. The late nights spent piecing together notes from last week’s session. The frustration of remembering half a conversation with an NPC and none of their name. The heart-sinking moment when you realize you’ve lost something your players cared about. I built this because I’ve been there. Because I’m one of you.</p>
+
+  <p>I am a Dungeon Master — just like you. I’ve juggled worlds in my head, worried about what I forgot, and spent too many hours trying to hold every thread of a living story together. The Chronicle isn’t just a tool I created — it’s the assistant I always needed at my own table. A quiet scribe that listens when you speak, remembers when you forget, and answers when you ask.</p>
+
+  <p>Every part of this project carries that intent. The commands aren’t just functions; they’re memories waiting to be kept safe. Each one was written and tested not by a company, but by a storyteller who wanted to lift some of the weight from the shoulders of other storytellers.</p>
+
+  <p>The Chronicle was shaped by passion and persistence — every late night spent debugging between campaign prep, every time a player smiled because I recalled a forgotten detail, every time a friend said, “You should share this.” It’s built on love for the craft of DMing and respect for every player who trusts their imagination to you.</p>
+
+  <p>If you take nothing else from this site, let it be this: you are not alone at your table. There’s an entire world of DMs who know the joy and exhaustion of worldbuilding, who understand the pride of seeing your players lost in a story you made. This project is my way of giving back — a token of gratitude to a community that has given me countless adventures.</p>
+
+  <p>If you ever have questions, ideas, stories to share, or just need a word from someone who understands — reach out. I read every message. Every one matters.</p>
+
+  <p style="text-align:center; font-size:1.1em;">
+    📧 <a href="mailto:admin@slendystuff.com" style="color:#6b0f0f; text-decoration:none; font-weight:bold;">admin@slendystuff.com</a>
+  </p>
+
   <p><em>From one Dungeon Master to another — may your dice roll true, your players stay curious, and your stories live forever.</em></p>
-  <p><strong>— Slendy, Creator of the Chronicle</strong></p>
+
+  <p><em>— Slendy, Creator of the Chronicle</em></p>
 </section>
 
 <footer>
-  <p>“Stories fade. Chronicles endure.”</p>
-  <p>© 2025 Slendy Stuff. All rights reserved.</p>
+  <div class="divider"><svg viewBox="0 0 100 10"><path d="M0,5 Q25,0 50,5 T100,5" /></svg></div>
+  <p>© 2025 Slendy Stuff | Forged in ink, code, and imagination.</p>
 </footer>
+
+<script>
+  // Soft fade-in for each section
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('section').forEach(sec => observer.observe(sec));
+</script>
 
 </body>
 </html>
