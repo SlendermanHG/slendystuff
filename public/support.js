@@ -6,6 +6,7 @@
   const anydeskMeta = document.querySelector("[data-anydesk-meta]");
   const supportForm = document.querySelector("[data-support-form]");
   const status = document.querySelector("[data-support-status]");
+  const accountHint = document.querySelector("[data-support-account-hint]");
   let supportEmail = "Help@slendystuff.com";
 
   try {
@@ -21,6 +22,8 @@
     if (supportIntro) {
       supportIntro.textContent = config.support.intro;
     }
+
+    await hydrateAccountHint();
 
     const anydesk = await app.getAnydeskInfo();
     if (anydeskLink) {
@@ -69,8 +72,13 @@
 
         supportForm.reset();
         if (status) {
-          status.textContent = "Request sent. I logged it and will follow up at your email.";
-          status.className = "status ok";
+          if (result.supportIsFree) {
+            status.textContent = `Request sent. This ticket is marked FREE support (qualifying purchase within 365 days).`;
+            status.className = "status ok";
+          } else {
+            status.textContent = `Request sent. Billing status: paid support required. Reason: ${result.billingReason || "No qualifying purchase in last 365 days."}`;
+            status.className = "status error";
+          }
         }
         app.track("support_request_submitted", {
           emailProvided: Boolean(payload.email),
@@ -89,6 +97,40 @@
         }
       }
     });
+  }
+
+  async function hydrateAccountHint() {
+    try {
+      const response = await fetch("/api/auth/session");
+      const session = await response.json();
+      if (!session.ok || !session.authenticated) {
+        if (accountHint) {
+          accountHint.textContent = "Sign into your account before support requests so purchase-based free-support eligibility can be checked automatically.";
+        }
+        return;
+      }
+
+      const user = session.user || {};
+      const eligibility = session.eligibility || {};
+      const nameInput = document.getElementById("name");
+      const emailInput = document.getElementById("email");
+      if (nameInput && user.name) nameInput.value = user.name;
+      if (emailInput && user.email) emailInput.value = user.email;
+
+      if (accountHint) {
+        if (eligibility.eligible) {
+          accountHint.textContent = `Account detected: ${user.email}. Current support status: FREE through ${formatDate(eligibility.freeSupportUntil)}.`;
+          accountHint.className = "status ok";
+        } else {
+          accountHint.textContent = `Account detected: ${user.email}. Current support status: paid support required. Reason: ${eligibility.reason || "No qualifying purchase in last 365 days."}`;
+          accountHint.className = "status error";
+        }
+      }
+    } catch {
+      if (accountHint) {
+        accountHint.textContent = "Account status unavailable in static mode. Backend hosting is required for automatic eligibility checks.";
+      }
+    }
   }
 
   function formatDate(value) {

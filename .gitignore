@@ -3,3 +3,4 @@ logs/
 .env
 .env.*
 data/secrets.json
+data/accounts.json

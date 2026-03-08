@@ -26,6 +26,14 @@ Open:
 - `data/settings.json` (public-safe editable settings)
 - `data/secrets.json` (generated locally, gitignored)
 - `data/secrets.example.json` (template)
+- `data/accounts.json` (runtime account/purchase/support data, gitignored)
+- `data/accounts.example.json` (template)
+
+## Account + support billing policy
+- Users can register/login from `/account.html`.
+- Support requests check account purchase history.
+- If a purchase exists within the previous 365 days: support is marked `free_support`.
+- If no qualifying purchase exists: support is marked `paid_support_required`.
 
 ## Logging target
 Default path is set in `data/secrets.json` as `protonDriveLogPath`.

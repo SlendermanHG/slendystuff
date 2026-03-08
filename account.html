@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account | Slendy Stuff</title>
+  <meta name="description" content="Create an account to track purchases, support eligibility, and request history.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark">SS</span>
+        <span data-brand-name>Slendy Stuff</span>
+      </a>
+
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
+
+      <nav class="site-nav" data-nav aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/custom-tool.html">Custom Tool Request</a>
+        <a href="/support.html">Tech Support</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/account.html">Account</a>
+        <a href="/about.html">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section shell chaos-burst">
+      <div class="section-head">
+        <p class="eyebrow">Account Center</p>
+        <h1>Purchases, support eligibility, and return requests</h1>
+        <p class="muted" data-account-policy>Free remote support applies when a product purchase exists within the last 365 days. Otherwise paid support applies.</p>
+      </div>
+
+      <div class="grid two" data-account-auth>
+        <article class="card">
+          <h2>Create Account</h2>
+          <form data-register-form>
+            <div class="field">
+              <label for="registerName">Name</label>
+              <input id="registerName" name="name" required>
+            </div>
+            <div class="field">
+              <label for="registerEmail">Email</label>
+              <input id="registerEmail" name="email" type="email" required>
+            </div>
+            <div class="field">
+              <label for="registerPassword">Password</label>
+              <input id="registerPassword" name="password" type="password" minlength="8" required>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="submit">Create Account</button>
+            </div>
+            <p class="status" data-register-status></p>
+          </form>
+        </article>
+
+        <article class="card">
+          <h2>Sign In</h2>
+          <form data-login-form>
+            <div class="field">
+              <label for="loginEmail">Email</label>
+              <input id="loginEmail" name="email" type="email" required>
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <input id="loginPassword" name="password" type="password" required>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="submit">Sign In</button>
+            </div>
+            <p class="status" data-login-status></p>
+          </form>
+        </article>
+      </div>
+
+      <section class="grid" data-account-dashboard hidden>
+        <article class="card">
+          <h2>Account Summary</h2>
+          <p class="muted" data-account-user></p>
+          <p class="muted" data-account-eligibility></p>
+          <div class="inline-actions">
+            <a class="btn" href="/support.html">Open Support Request</a>
+            <button class="btn btn-ghost" data-logout-account type="button">Logout</button>
+          </div>
+        </article>
+
+        <div class="grid two">
+          <article class="card">
+            <h3>Purchases</h3>
+            <div data-purchases-list class="muted">No purchases recorded yet.</div>
+          </article>
+
+          <article class="card">
+            <h3>Support Requests</h3>
+            <div data-support-history class="muted">No support requests recorded yet.</div>
+          </article>
+        </div>
+
+        <article class="card sticker-panel">
+          <h3>Saved Payment Methods</h3>
+          <p class="muted">Raw card data is not stored on this site. Saved payment methods should be handled through Stripe customer vaulting and customer portal integration.</p>
+          <p class="muted">Current status: backend account tracking is live, payment-method vault integration is pending Stripe API setup.</p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell footer-grid">
+      <p class="muted">Account + support policy management layer ready for backend hosting mode.</p>
+    </div>
+  </footer>
+
+  <script src="/shared.js"></script>
+  <script src="/account.js"></script>
+</body>
+</html>

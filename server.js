@@ -13,16 +13,21 @@ const DATA_DIR = path.join(ROOT_DIR, "data");
 const LOG_DIR_FALLBACK = path.join(ROOT_DIR, "logs");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const SECRETS_PATH = path.join(DATA_DIR, "secrets.json");
+const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
 
 const SESSION_COOKIE = "slendy_admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const sessions = new Map();
+const USER_SESSION_COOKIE = "slendy_user_session";
+const USER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const userSessions = new Map();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this-admin-password";
 const PORT = Number(process.env.PORT || 4173);
 
 let settingsCache = null;
 let secretsCache = null;
+let accountsCache = null;
 let writeQueue = Promise.resolve();
 let anydeskRefreshTimer = null;
 
@@ -108,6 +113,10 @@ const defaultSecrets = {
     discord: "",
     stripeSecret: ""
   }
+};
+
+const defaultAccounts = {
+  users: []
 };
 
 function nowIso() {
@@ -203,12 +212,56 @@ function normalizeSecrets(payload) {
   return merged;
 }
 
+function normalizeAccounts(payload) {
+  const users = Array.isArray(payload && payload.users) ? payload.users : [];
+  return {
+    users: users
+      .filter((user) => user && typeof user === "object")
+      .map((user) => ({
+        id: safeString(user.id, crypto.randomUUID()),
+        email: safeString(user.email, "").trim(),
+        emailLower: safeString(user.emailLower, safeString(user.email, "").toLowerCase()).trim().toLowerCase(),
+        name: safeString(user.name, "").trim(),
+        passwordHash: safeString(user.passwordHash, ""),
+        createdAt: safeString(user.createdAt, nowIso()),
+        stripeCustomerId: safeString(user.stripeCustomerId, ""),
+        purchases: Array.isArray(user.purchases)
+          ? user.purchases.map((purchase) => ({
+              id: safeString(purchase.id, crypto.randomUUID()),
+              productId: safeString(purchase.productId, ""),
+              title: safeString(purchase.title, ""),
+              amountCents: Number.isFinite(Number(purchase.amountCents)) ? Number(purchase.amountCents) : null,
+              currency: safeString(purchase.currency, "USD"),
+              purchasedAt: safeString(purchase.purchasedAt, nowIso()),
+              paymentRef: safeString(purchase.paymentRef, ""),
+              source: safeString(purchase.source, "manual")
+            }))
+          : [],
+        supportRequests: Array.isArray(user.supportRequests)
+          ? user.supportRequests.map((request) => ({
+              id: safeString(request.id, crypto.randomUUID()),
+              createdAt: safeString(request.createdAt, nowIso()),
+              issue: safeString(request.issue, ""),
+              preferredTime: safeString(request.preferredTime, ""),
+              serviceLevel: safeString(request.serviceLevel, ""),
+              managementOptions: Array.isArray(request.managementOptions)
+                ? request.managementOptions.map((item) => safeString(item, "")).filter(Boolean)
+                : [],
+              billingStatus: safeString(request.billingStatus, "paid_support_required"),
+              billingReason: safeString(request.billingReason, "")
+            }))
+          : []
+      }))
+  };
+}
+
 async function initData() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(LOG_DIR_FALLBACK, { recursive: true });
 
   settingsCache = normalizeSettings(await readJson(SETTINGS_PATH, defaultSettings));
   secretsCache = normalizeSecrets(await readJson(SECRETS_PATH, defaultSecrets));
+  accountsCache = normalizeAccounts(await readJson(ACCOUNTS_PATH, defaultAccounts));
 }
 
 function resolveLogDir() {
@@ -265,6 +318,101 @@ function safeString(value, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
+function hashPassword(plainPassword) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(plainPassword), salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(plainPassword, storedHash) {
+  const parts = safeString(storedHash, "").split(":");
+  if (parts.length !== 2) {
+    return false;
+  }
+
+  const [salt, originalHash] = parts;
+  const candidate = crypto.scryptSync(String(plainPassword), salt, 64).toString("hex");
+
+  const a = Buffer.from(candidate, "hex");
+  const b = Buffer.from(originalHash, "hex");
+  if (a.length !== b.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(a, b);
+}
+
+function findUserByEmail(email) {
+  const emailLower = safeString(email, "").trim().toLowerCase();
+  if (!emailLower) {
+    return null;
+  }
+  return accountsCache.users.find((user) => user.emailLower === emailLower) || null;
+}
+
+function findUserById(userId) {
+  return accountsCache.users.find((user) => user.id === userId) || null;
+}
+
+function sanitizeUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt,
+    stripeCustomerId: user.stripeCustomerId,
+    purchases: [...user.purchases].sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime()),
+    supportRequests: [...user.supportRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  };
+}
+
+function getSupportEligibility(user) {
+  const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const purchases = [...(user.purchases || [])]
+    .map((purchase) => ({
+      ...purchase,
+      purchasedMs: new Date(purchase.purchasedAt).getTime()
+    }))
+    .filter((purchase) => Number.isFinite(purchase.purchasedMs))
+    .sort((a, b) => b.purchasedMs - a.purchasedMs);
+
+  if (purchases.length === 0) {
+    return {
+      eligible: false,
+      billingStatus: "paid_support_required",
+      reason: "No purchase found on this account.",
+      qualifyingPurchase: null,
+      freeSupportUntil: null
+    };
+  }
+
+  const qualifying = purchases.find((purchase) => purchase.purchasedMs + oneYearMs >= now);
+  if (!qualifying) {
+    const lastPurchase = purchases[0];
+    return {
+      eligible: false,
+      billingStatus: "paid_support_required",
+      reason: "Most recent purchase is older than 365 days.",
+      qualifyingPurchase: null,
+      freeSupportUntil: new Date(lastPurchase.purchasedMs + oneYearMs).toISOString()
+    };
+  }
+
+  return {
+    eligible: true,
+    billingStatus: "free_support",
+    reason: "Purchase within 365 days found.",
+    qualifyingPurchase: {
+      id: qualifying.id,
+      productId: qualifying.productId,
+      title: qualifying.title,
+      purchasedAt: qualifying.purchasedAt
+    },
+    freeSupportUntil: new Date(qualifying.purchasedMs + oneYearMs).toISOString()
+  };
+}
+
 function createAdminSession(res) {
   const token = crypto.randomBytes(24).toString("hex");
   const expiresAt = Date.now() + SESSION_TTL_MS;
@@ -278,11 +426,33 @@ function createAdminSession(res) {
   });
 }
 
+function createUserSession(res, user) {
+  const token = crypto.randomBytes(24).toString("hex");
+  const expiresAt = Date.now() + USER_SESSION_TTL_MS;
+  userSessions.set(token, { userId: user.id, expiresAt });
+
+  res.cookie(USER_SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+    maxAge: USER_SESSION_TTL_MS
+  });
+}
+
 function clearExpiredSessions() {
   const now = Date.now();
   for (const [token, value] of sessions.entries()) {
     if (!value || value.expiresAt < now) {
       sessions.delete(token);
+    }
+  }
+}
+
+function clearExpiredUserSessions() {
+  const now = Date.now();
+  for (const [token, value] of userSessions.entries()) {
+    if (!value || value.expiresAt < now) {
+      userSessions.delete(token);
     }
   }
 }
@@ -295,6 +465,25 @@ function requireAdmin(req, res, next) {
     return res.status(401).json({ ok: false, error: "Unauthorized" });
   }
 
+  next();
+}
+
+function requireUser(req, res, next) {
+  clearExpiredUserSessions();
+  const token = req.cookies[USER_SESSION_COOKIE];
+  const session = token ? userSessions.get(token) : null;
+  if (!session) {
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+
+  const user = findUserById(session.userId);
+  if (!user) {
+    userSessions.delete(token);
+    res.clearCookie(USER_SESSION_COOKIE);
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+
+  req.user = user;
   next();
 }
 
@@ -320,6 +509,10 @@ function getPublicConfig() {
       customTrackingEnabled: settingsCache.analytics.customTrackingEnabled !== false,
       gaMeasurementId: secretsCache.gaMeasurementId,
       metaPixelId: secretsCache.metaPixelId
+    },
+    account: {
+      enabled: true,
+      supportPolicy: "Free remote support is available for purchases made within the last 365 days. Otherwise paid support applies."
     },
     products: settingsCache.products
   };
@@ -424,6 +617,118 @@ app.get("/api/support/anydesk", (_req, res) => {
   });
 });
 
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    const name = safeString(req.body.name, "").trim();
+    const email = safeString(req.body.email, "").trim();
+    const password = safeString(req.body.password, "");
+    const emailLower = email.toLowerCase();
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ ok: false, error: "Name, email, and password are required." });
+    }
+    if (!email.includes("@") || email.length > 180) {
+      return res.status(400).json({ ok: false, error: "Invalid email format." });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ ok: false, error: "Password must be at least 8 characters." });
+    }
+    if (findUserByEmail(emailLower)) {
+      return res.status(409).json({ ok: false, error: "An account with this email already exists." });
+    }
+
+    const user = {
+      id: crypto.randomUUID(),
+      email,
+      emailLower,
+      name,
+      passwordHash: hashPassword(password),
+      createdAt: nowIso(),
+      stripeCustomerId: "",
+      purchases: [],
+      supportRequests: []
+    };
+
+    accountsCache.users.push(user);
+    await saveJson(ACCOUNTS_PATH, accountsCache);
+    createUserSession(res, user);
+
+    await appendLog("account-register", { userId: user.id, email: user.email }, req);
+
+    res.json({
+      ok: true,
+      user: sanitizeUser(user),
+      eligibility: getSupportEligibility(user)
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: safeString(error.message, "Account registration failed") });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const email = safeString(req.body.email, "").trim();
+    const password = safeString(req.body.password, "");
+    const user = findUserByEmail(email);
+
+    if (!user || !verifyPassword(password, user.passwordHash)) {
+      return res.status(401).json({ ok: false, error: "Invalid email or password." });
+    }
+
+    createUserSession(res, user);
+    await appendLog("account-login", { userId: user.id, email: user.email }, req);
+
+    res.json({
+      ok: true,
+      user: sanitizeUser(user),
+      eligibility: getSupportEligibility(user)
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: safeString(error.message, "Account login failed") });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  const token = req.cookies[USER_SESSION_COOKIE];
+  if (token) {
+    userSessions.delete(token);
+  }
+  res.clearCookie(USER_SESSION_COOKIE);
+  res.json({ ok: true });
+});
+
+app.get("/api/auth/session", (req, res) => {
+  clearExpiredUserSessions();
+  const token = req.cookies[USER_SESSION_COOKIE];
+  const session = token ? userSessions.get(token) : null;
+  if (!session) {
+    return res.json({ ok: true, authenticated: false });
+  }
+
+  const user = findUserById(session.userId);
+  if (!user) {
+    userSessions.delete(token);
+    res.clearCookie(USER_SESSION_COOKIE);
+    return res.json({ ok: true, authenticated: false });
+  }
+
+  return res.json({
+    ok: true,
+    authenticated: true,
+    user: sanitizeUser(user),
+    eligibility: getSupportEligibility(user)
+  });
+});
+
+app.get("/api/account/summary", requireUser, (req, res) => {
+  res.json({
+    ok: true,
+    user: sanitizeUser(req.user),
+    eligibility: getSupportEligibility(req.user),
+    billingPolicy: "If no qualifying purchase exists within 365 days, paid support is required."
+  });
+});
+
 app.post("/api/track", async (req, res) => {
   try {
     if (settingsCache.analytics.customTrackingEnabled === false) {
@@ -476,6 +781,22 @@ app.post("/api/age-verify", async (req, res) => {
 
 app.post("/api/support/request", async (req, res) => {
   try {
+    clearExpiredUserSessions();
+    const token = req.cookies[USER_SESSION_COOKIE];
+    const session = token ? userSessions.get(token) : null;
+    const sessionUser = session ? findUserById(session.userId) : null;
+    const emailUser = findUserByEmail(safeString(req.body.email, "").trim());
+    const linkedUser = sessionUser || emailUser;
+    const eligibility = linkedUser
+      ? getSupportEligibility(linkedUser)
+      : {
+          eligible: false,
+          billingStatus: "paid_support_required",
+          reason: "No account purchase record found.",
+          qualifyingPurchase: null,
+          freeSupportUntil: null
+        };
+
     const requestDetails = {
       name: safeString(req.body.name, "Anonymous"),
       email: safeString(req.body.email, ""),
@@ -485,12 +806,37 @@ app.post("/api/support/request", async (req, res) => {
       managementOptions: Array.isArray(req.body.managementOptions)
         ? req.body.managementOptions.map((item) => safeString(item, "")).filter(Boolean)
         : [],
+      billingStatus: eligibility.billingStatus,
+      billingReason: eligibility.reason,
+      freeSupportUntil: eligibility.freeSupportUntil,
+      accountUserId: linkedUser ? linkedUser.id : null,
       clientTimezone: safeString(req.body.clientTimezone, "")
     };
 
+    if (linkedUser) {
+      linkedUser.supportRequests.push({
+        id: crypto.randomUUID(),
+        createdAt: nowIso(),
+        issue: requestDetails.issue,
+        preferredTime: requestDetails.preferredTime,
+        serviceLevel: requestDetails.serviceLevel,
+        managementOptions: requestDetails.managementOptions,
+        billingStatus: requestDetails.billingStatus,
+        billingReason: requestDetails.billingReason
+      });
+      await saveJson(ACCOUNTS_PATH, accountsCache);
+    }
+
     await appendLog("support-request", requestDetails, req);
 
-    res.json({ ok: true, message: "Support request captured." });
+    res.json({
+      ok: true,
+      message: "Support request captured.",
+      billingStatus: requestDetails.billingStatus,
+      billingReason: requestDetails.billingReason,
+      freeSupportUntil: requestDetails.freeSupportUntil,
+      supportIsFree: requestDetails.billingStatus === "free_support"
+    });
   } catch (error) {
     res.status(500).json({ ok: false, error: safeString(error.message, "Support request failure") });
   }
@@ -587,6 +933,57 @@ app.post("/api/admin/refresh-anydesk", requireAdmin, async (_req, res) => {
   }
 
   return res.json(result);
+});
+
+app.get("/api/admin/accounts", requireAdmin, (_req, res) => {
+  const users = accountsCache.users.map((user) => ({
+    ...sanitizeUser(user),
+    eligibility: getSupportEligibility(user)
+  }));
+  res.json({ ok: true, users });
+});
+
+app.post("/api/admin/account-purchase", requireAdmin, async (req, res) => {
+  try {
+    const email = safeString(req.body.email, "").trim();
+    const productId = safeString(req.body.productId, "").trim();
+    const title = safeString(req.body.title, "").trim();
+    const amountCents = Number(req.body.amountCents);
+    const currency = safeString(req.body.currency, "USD").toUpperCase();
+    const paymentRef = safeString(req.body.paymentRef, "").trim();
+    const purchasedAt = safeString(req.body.purchasedAt, nowIso());
+
+    if (!email || !productId) {
+      return res.status(400).json({ ok: false, error: "Email and productId are required." });
+    }
+    if (!Number.isFinite(amountCents) || amountCents < 0) {
+      return res.status(400).json({ ok: false, error: "amountCents must be a non-negative number." });
+    }
+
+    const user = findUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ ok: false, error: "No account found for this email." });
+    }
+
+    const purchase = {
+      id: crypto.randomUUID(),
+      productId,
+      title,
+      amountCents,
+      currency,
+      purchasedAt,
+      paymentRef,
+      source: "manual-admin"
+    };
+    user.purchases.push(purchase);
+    await saveJson(ACCOUNTS_PATH, accountsCache);
+
+    await appendLog("account-purchase", { userId: user.id, email: user.email, purchase }, req);
+
+    res.json({ ok: true, purchase, eligibility: getSupportEligibility(user) });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: safeString(error.message, "Failed to add purchase") });
+  }
 });
 
 app.use(express.static(PUBLIC_DIR, { extensions: ["html"] }));

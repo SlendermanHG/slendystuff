@@ -70,5 +70,9 @@
       "ctaUrl": "mailto:admin@slendystuff.com?subject=Remote%20Control%20Bot%20Inquiry",
       "requires18Plus": true
     }
-  ]
+  ],
+  "account": {
+    "enabled": true,
+    "supportPolicy": "Free remote support is available for purchases made within the last 365 days. Otherwise paid support applies."
+  }
 }

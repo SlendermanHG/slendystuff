@@ -8,6 +8,12 @@ const secretsCandidate = fs.existsSync("data/secrets.json")
 
 files.push(secretsCandidate);
 
+const accountsCandidate = fs.existsSync("data/accounts.json")
+  ? "data/accounts.json"
+  : "data/accounts.example.json";
+
+files.push(accountsCandidate);
+
 for (const file of files) {
   JSON.parse(fs.readFileSync(file, "utf8"));
 }
@@ -17,6 +23,7 @@ const jsFiles = [
   "public/site.js",
   "public/support.js",
   "public/product.js",
+  "public/account.js",
   "public/custom-tool.js",
   "public/contact.js",
   "public/admin/admin.js"
