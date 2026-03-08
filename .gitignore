@@ -4,3 +4,4 @@ logs/
 .env.*
 data/secrets.json
 data/accounts.json
+data/admins.json

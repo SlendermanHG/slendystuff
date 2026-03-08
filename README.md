@@ -14,6 +14,7 @@ Run locally:
 
 ```powershell
 npm install
+$env:ADMIN_EMAIL = "operations@slendystuff.com"
 $env:ADMIN_PASSWORD = "set-a-strong-password"
 npm start
 ```
@@ -28,6 +29,14 @@ Open:
 - `data/secrets.example.json` (template)
 - `data/accounts.json` (runtime account/purchase/support data, gitignored)
 - `data/accounts.example.json` (template)
+- `data/admins.json` (runtime admin login accounts, gitignored)
+- `data/admins.example.json` (template)
+
+## Admin login account
+- Admin page login now uses **email + password**.
+- On first backend start, the server auto-creates one admin account if it does not already exist:
+  - `ADMIN_EMAIL` (defaults to `operations@slendystuff.com`)
+  - `ADMIN_PASSWORD` (set this to a strong value)
 
 ## Account + support billing policy
 - Users can register/login from `/account.html`.

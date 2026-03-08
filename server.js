@@ -14,6 +14,7 @@ const LOG_DIR_FALLBACK = path.join(ROOT_DIR, "logs");
 const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const SECRETS_PATH = path.join(DATA_DIR, "secrets.json");
 const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
+const ADMINS_PATH = path.join(DATA_DIR, "admins.json");
 
 const SESSION_COOKIE = "slendy_admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -22,12 +23,15 @@ const USER_SESSION_COOKIE = "slendy_user_session";
 const USER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const userSessions = new Map();
 
+const DEFAULT_ADMIN_EMAIL = "operations@slendystuff.com";
+const ADMIN_EMAIL = safeString(process.env.ADMIN_EMAIL, DEFAULT_ADMIN_EMAIL).trim().toLowerCase() || DEFAULT_ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-this-admin-password";
 const PORT = Number(process.env.PORT || 4173);
 
 let settingsCache = null;
 let secretsCache = null;
 let accountsCache = null;
+let adminsCache = null;
 let writeQueue = Promise.resolve();
 let anydeskRefreshTimer = null;
 
@@ -117,6 +121,10 @@ const defaultSecrets = {
 
 const defaultAccounts = {
   users: []
+};
+
+const defaultAdmins = {
+  admins: []
 };
 
 function nowIso() {
@@ -255,6 +263,28 @@ function normalizeAccounts(payload) {
   };
 }
 
+function normalizeAdmins(payload) {
+  const admins = Array.isArray(payload && payload.admins) ? payload.admins : [];
+  return {
+    admins: admins
+      .filter((admin) => admin && typeof admin === "object")
+      .map((admin) => {
+        const email = safeString(admin.email, "").trim();
+        return {
+          id: safeString(admin.id, crypto.randomUUID()),
+          email,
+          emailLower: safeString(admin.emailLower, email.toLowerCase()).trim().toLowerCase(),
+          name: safeString(admin.name, "Admin").trim() || "Admin",
+          passwordHash: safeString(admin.passwordHash, ""),
+          createdAt: safeString(admin.createdAt, nowIso()),
+          lastLoginAt: safeString(admin.lastLoginAt, ""),
+          role: safeString(admin.role, "owner")
+        };
+      })
+      .filter((admin) => admin.emailLower && admin.passwordHash)
+  };
+}
+
 async function initData() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(LOG_DIR_FALLBACK, { recursive: true });
@@ -262,6 +292,8 @@ async function initData() {
   settingsCache = normalizeSettings(await readJson(SETTINGS_PATH, defaultSettings));
   secretsCache = normalizeSecrets(await readJson(SECRETS_PATH, defaultSecrets));
   accountsCache = normalizeAccounts(await readJson(ACCOUNTS_PATH, defaultAccounts));
+  adminsCache = normalizeAdmins(await readJson(ADMINS_PATH, defaultAdmins));
+  await ensureBootstrapAdmin();
 }
 
 function resolveLogDir() {
@@ -341,6 +373,31 @@ function verifyPassword(plainPassword, storedHash) {
   return crypto.timingSafeEqual(a, b);
 }
 
+async function ensureBootstrapAdmin() {
+  const emailLower = ADMIN_EMAIL;
+  if (!emailLower) {
+    return;
+  }
+
+  const existing = findAdminByEmail(emailLower);
+  if (existing) {
+    return;
+  }
+
+  const admin = {
+    id: crypto.randomUUID(),
+    email: emailLower,
+    emailLower,
+    name: "Primary Admin",
+    passwordHash: hashPassword(ADMIN_PASSWORD),
+    createdAt: nowIso(),
+    lastLoginAt: "",
+    role: "owner"
+  };
+  adminsCache.admins.push(admin);
+  await saveJson(ADMINS_PATH, adminsCache);
+}
+
 function findUserByEmail(email) {
   const emailLower = safeString(email, "").trim().toLowerCase();
   if (!emailLower) {
@@ -353,6 +410,18 @@ function findUserById(userId) {
   return accountsCache.users.find((user) => user.id === userId) || null;
 }
 
+function findAdminByEmail(email) {
+  const emailLower = safeString(email, "").trim().toLowerCase();
+  if (!emailLower) {
+    return null;
+  }
+  return adminsCache.admins.find((admin) => admin.emailLower === emailLower) || null;
+}
+
+function findAdminById(adminId) {
+  return adminsCache.admins.find((admin) => admin.id === adminId) || null;
+}
+
 function sanitizeUser(user) {
   return {
     id: user.id,
@@ -362,6 +431,17 @@ function sanitizeUser(user) {
     stripeCustomerId: user.stripeCustomerId,
     purchases: [...user.purchases].sort((a, b) => new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime()),
     supportRequests: [...user.supportRequests].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  };
+}
+
+function sanitizeAdmin(admin) {
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+    createdAt: admin.createdAt,
+    lastLoginAt: admin.lastLoginAt
   };
 }
 
@@ -413,10 +493,10 @@ function getSupportEligibility(user) {
   };
 }
 
-function createAdminSession(res) {
+function createAdminSession(res, admin) {
   const token = crypto.randomBytes(24).toString("hex");
   const expiresAt = Date.now() + SESSION_TTL_MS;
-  sessions.set(token, { expiresAt });
+  sessions.set(token, { adminId: admin.id, expiresAt });
 
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -460,11 +540,19 @@ function clearExpiredUserSessions() {
 function requireAdmin(req, res, next) {
   clearExpiredSessions();
   const token = req.cookies[SESSION_COOKIE];
-
-  if (!token || !sessions.has(token)) {
+  const session = token ? sessions.get(token) : null;
+  if (!session) {
     return res.status(401).json({ ok: false, error: "Unauthorized" });
   }
 
+  const admin = findAdminById(session.adminId);
+  if (!admin) {
+    sessions.delete(token);
+    res.clearCookie(SESSION_COOKIE);
+    return res.status(401).json({ ok: false, error: "Unauthorized" });
+  }
+
+  req.admin = admin;
   next();
 }
 
@@ -485,17 +573,6 @@ function requireUser(req, res, next) {
 
   req.user = user;
   next();
-}
-
-function isPasswordValid(inputPassword) {
-  const input = Buffer.from(String(inputPassword || ""));
-  const expected = Buffer.from(String(ADMIN_PASSWORD));
-
-  if (input.length !== expected.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(input, expected);
 }
 
 function getPublicConfig() {
@@ -883,13 +960,27 @@ app.post("/api/contact-message", async (req, res) => {
   }
 });
 
-app.post("/api/admin/login", (req, res) => {
-  if (!isPasswordValid(req.body.password)) {
-    return res.status(401).json({ ok: false, error: "Invalid password" });
-  }
+app.post("/api/admin/login", async (req, res) => {
+  try {
+    const email = safeString(req.body.email, "").trim().toLowerCase();
+    const password = safeString(req.body.password, "");
 
-  createAdminSession(res);
-  return res.json({ ok: true });
+    if (!email || !password) {
+      return res.status(400).json({ ok: false, error: "Email and password are required." });
+    }
+
+    const admin = findAdminByEmail(email);
+    if (!admin || !verifyPassword(password, admin.passwordHash)) {
+      return res.status(401).json({ ok: false, error: "Invalid email or password" });
+    }
+
+    admin.lastLoginAt = nowIso();
+    await saveJson(ADMINS_PATH, adminsCache);
+    createAdminSession(res, admin);
+    return res.json({ ok: true, admin: sanitizeAdmin(admin) });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Admin login failure") });
+  }
 });
 
 app.post("/api/admin/logout", (req, res) => {
@@ -902,8 +993,8 @@ app.post("/api/admin/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/admin/session", requireAdmin, (_req, res) => {
-  res.json({ ok: true });
+app.get("/api/admin/session", requireAdmin, (req, res) => {
+  res.json({ ok: true, admin: sanitizeAdmin(req.admin) });
 });
 
 app.get("/api/admin/settings", requireAdmin, (_req, res) => {
@@ -919,7 +1010,7 @@ app.put("/api/admin/settings", requireAdmin, async (req, res) => {
     const nextSettings = normalizeSettings(req.body.settings || settingsCache);
     const nextSecrets = normalizeSecrets(req.body.secrets || secretsCache);
 
-    await saveSettingsAndSecrets({ settings: nextSettings, secrets: nextSecrets });
+    await saveSettingsAndSecrets({ settings: nextSettings, secrets: nextSecrets }, req.admin.email || "admin");
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ ok: false, error: safeString(error.message, "Failed to save settings") });
@@ -999,7 +1090,10 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
-    console.log(`Admin password source: ADMIN_PASSWORD env var (current default in use if not set).`);
+    console.log(`Admin bootstrap source: ADMIN_EMAIL (${ADMIN_EMAIL}) + ADMIN_PASSWORD env vars.`);
+    if (ADMIN_PASSWORD === "change-this-admin-password") {
+      console.warn("ADMIN_PASSWORD is using the default value. Set a strong value in production.");
+    }
     console.log(`Logs currently target: ${resolveLogDir()}`);
   });
 }

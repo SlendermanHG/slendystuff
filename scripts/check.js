@@ -14,6 +14,12 @@ const accountsCandidate = fs.existsSync("data/accounts.json")
 
 files.push(accountsCandidate);
 
+const adminsCandidate = fs.existsSync("data/admins.json")
+  ? "data/admins.json"
+  : "data/admins.example.json";
+
+files.push(adminsCandidate);
+
 for (const file of files) {
   JSON.parse(fs.readFileSync(file, "utf8"));
 }

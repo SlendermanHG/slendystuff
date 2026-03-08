@@ -25,8 +25,12 @@
     <section class="admin-panel">
       <article class="card admin-auth" data-admin-auth>
         <h1>Admin Login</h1>
-        <p class="muted">Set a strong `ADMIN_PASSWORD` environment variable before production.</p>
+        <p class="muted">Use your admin account email + password. Bootstrap values come from `ADMIN_EMAIL` and `ADMIN_PASSWORD` on first run.</p>
         <form data-login-form>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required>
+          </div>
           <div class="field">
             <label for="password">Password</label>
             <input id="password" name="password" type="password" required>

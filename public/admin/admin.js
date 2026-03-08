@@ -74,13 +74,15 @@
     event.preventDefault();
     setStatus(loginStatus, "Signing in...", "");
 
-    const password = String(new FormData(loginForm).get("password") || "");
+    const formData = new FormData(loginForm);
+    const email = String(formData.get("email") || "").trim().toLowerCase();
+    const password = String(formData.get("password") || "");
     try {
       const response = await fetch("/api/admin/login", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ email, password })
       });
 
       const payload = await parseJson(response);
