@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tech Support | Slendy Stuff</title>
+  <meta name="description" content="Request a remote support session and download the latest AnyDesk installer in minimal steps.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark">SS</span>
+        <span data-brand-name>Slendy Stuff</span>
+      </a>
+
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
+
+      <nav class="site-nav" data-nav aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/support.html">Tech Support</a>
+        <a href="/admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section shell">
+      <div class="section-head">
+        <p class="eyebrow">Tech Support</p>
+        <h1>Remote cleanup and support session request</h1>
+        <p class="muted" data-support-intro>Request a remote cleanup/support session through AnyDesk with minimal steps.</p>
+      </div>
+
+      <div class="grid two">
+        <article class="card">
+          <h2>Fastest Path</h2>
+          <ol class="list">
+            <li>Download AnyDesk from the button below.</li>
+            <li>Run the installer and open AnyDesk.</li>
+            <li>Submit the request form with your issue details.</li>
+            <li>I will contact you to schedule and connect.</li>
+          </ol>
+          <div class="inline-actions">
+            <a class="btn" data-anydesk-link href="https://download.anydesk.com/AnyDesk.exe" target="_blank" rel="noopener">Download Latest AnyDesk</a>
+          </div>
+          <p class="muted" data-anydesk-meta>Checking latest AnyDesk installer status...</p>
+        </article>
+
+        <article class="card">
+          <h2>Request Session</h2>
+          <form data-support-form>
+            <div class="form-grid">
+              <div class="field">
+                <label for="name">Name</label>
+                <input id="name" name="name" required>
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" required>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label for="preferredTime">Preferred Time Window</label>
+                <input id="preferredTime" name="preferredTime" placeholder="Example: Weeknights after 7PM ET">
+              </div>
+            </div>
+            <div class="field">
+              <label for="issue">Issue Details</label>
+              <textarea id="issue" name="issue" placeholder="What needs to be fixed/cleaned?" required></textarea>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="submit">Send Support Request</button>
+            </div>
+            <p class="status" data-support-status></p>
+          </form>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="shell">
+      <p class="muted">Support requests and analytics are logged to your configured Proton Drive path.</p>
+    </div>
+  </footer>
+
+  <script src="/shared.js"></script>
+  <script src="/support.js"></script>
+</body>
+</html>

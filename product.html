@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Product | Slendy Stuff</title>
+  <meta name="description" content="Product details page with optional 18+ verification.">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark">SS</span>
+        <span data-brand-name>Slendy Stuff</span>
+      </a>
+
+      <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
+
+      <nav class="site-nav" data-nav aria-label="Primary">
+        <a href="/">Home</a>
+        <a href="/support.html">Tech Support</a>
+        <a href="/admin/">Admin</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="section shell">
+      <div data-product-content></div>
+      <article class="card hidden" data-product-not-found>
+        <h1>Product not found</h1>
+        <p class="muted">The requested item does not exist or has been removed.</p>
+        <a class="btn" href="/">Back to Home</a>
+      </article>
+    </section>
+  </main>
+
+  <div class="overlay hidden" id="age-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
+    <article class="card overlay-card">
+      <p class="eyebrow">Age Verification</p>
+      <h2 id="age-gate-title">Are you 18 or older?</h2>
+      <p class="muted">Your answer, IP, date/time, and timezone are logged for compliance.</p>
+      <div class="inline-actions">
+        <button class="btn" data-age-answer="yes">Yes, continue</button>
+        <button class="btn btn-ghost" data-age-answer="no">No, exit</button>
+      </div>
+      <p class="status" data-age-status></p>
+    </article>
+  </div>
+
+  <script src="/shared.js"></script>
+  <script src="/product.js"></script>
+</body>
+</html>

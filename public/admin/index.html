@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Settings | Slendy Stuff</title>
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="/">
+        <span class="brand-mark">SS</span>
+        <span data-brand-name>Slendy Stuff</span>
+      </a>
+      <nav class="site-nav" aria-label="Admin navigation">
+        <a href="/">Public Site</a>
+        <a href="/support.html">Support Page</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell admin-wrap">
+    <section class="admin-panel">
+      <article class="card admin-auth" data-admin-auth>
+        <h1>Admin Login</h1>
+        <p class="muted">Set a strong `ADMIN_PASSWORD` environment variable before production.</p>
+        <form data-login-form>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" required>
+          </div>
+          <div class="inline-actions">
+            <button class="btn" type="submit">Sign In</button>
+          </div>
+          <p class="status" data-login-status></p>
+        </form>
+      </article>
+
+      <section class="admin-content hidden" data-admin-content>
+        <article class="card">
+          <h2>Brand + Hero</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label>Brand Name</label>
+              <input name="brandName">
+            </div>
+            <div class="field">
+              <label>Tagline</label>
+              <input name="brandTagline">
+            </div>
+          </div>
+          <div class="field">
+            <label>Hero Title</label>
+            <input name="heroTitle">
+          </div>
+          <div class="field">
+            <label>Hero Subtitle</label>
+            <textarea name="heroSubtitle"></textarea>
+          </div>
+          <div class="field">
+            <label>Accent Hex</label>
+            <input name="accentHex" placeholder="#ff2ea6">
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Stripe Links (Test links kept for now)</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label>Starter</label>
+              <input name="stripeStarter">
+            </div>
+            <div class="field">
+              <label>Pro</label>
+              <input name="stripePro">
+            </div>
+          </div>
+          <div class="field">
+            <label>Reset</label>
+            <input name="stripeReset">
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Support + AnyDesk</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label>Support Email</label>
+              <input name="supportEmail">
+            </div>
+            <div class="field">
+              <label>AnyDesk Source URL</label>
+              <input name="anydeskSourceUrl">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Refresh Interval (hours)</label>
+              <input name="refreshIntervalHours" type="number" min="1">
+            </div>
+            <div class="field">
+              <label>Tracking Enabled</label>
+              <label><input name="customTrackingEnabled" type="checkbox"> Enable custom tracking</label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Support Intro Text</label>
+            <textarea name="supportIntro"></textarea>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Logging + Tracking Keys</h2>
+          <div class="field">
+            <label>Proton Drive Log Path</label>
+            <input name="protonDriveLogPath">
+          </div>
+          <div class="form-grid">
+            <div class="field">
+              <label>GA Measurement ID</label>
+              <input name="gaMeasurementId" placeholder="G-XXXXXXXXXX">
+            </div>
+            <div class="field">
+              <label>Meta Pixel ID</label>
+              <input name="metaPixelId">
+            </div>
+          </div>
+          <div class="field">
+            <label>Webhook URL (optional)</label>
+            <input name="customWebhookUrl" placeholder="https://...">
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>API Keys</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label>OpenAI</label>
+              <input name="apiKeyOpenai" type="password">
+            </div>
+            <div class="field">
+              <label>Discord</label>
+              <input name="apiKeyDiscord" type="password">
+            </div>
+          </div>
+          <div class="field">
+            <label>Stripe Secret</label>
+            <input name="apiKeyStripeSecret" type="password">
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>Products</h2>
+          <p class="muted">Use one row per product/program/bot. IDs should stay unique.</p>
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>CTA Label</th>
+                  <th>CTA URL</th>
+                  <th>18+</th>
+                  <th>Remove</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody data-products-body></tbody>
+            </table>
+          </div>
+          <div class="inline-actions">
+            <button class="btn btn-ghost" type="button" data-add-product>Add Product Row</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="inline-actions">
+            <button class="btn" type="button" data-save-settings>Save All Settings</button>
+            <button class="btn btn-ghost" type="button" data-refresh-anydesk>Refresh AnyDesk Now</button>
+            <button class="btn btn-ghost" type="button" data-logout>Logout</button>
+          </div>
+          <p class="status" data-save-status></p>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

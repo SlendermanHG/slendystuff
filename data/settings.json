@@ -1,0 +1,72 @@
+{
+  "brand": {
+    "name": "Slendy Stuff",
+    "tagline": "Programs and bots built for real tasks",
+    "heroTitle": "Tools, Bots, and Support That Scale With Your Next Idea",
+    "heroSubtitle": "Launch different niche products fast with one versatile storefront and support flow."
+  },
+  "theme": {
+    "accentHex": "#ff2ea6"
+  },
+  "stripeLinks": {
+    "starter": "https://buy.stripe.com/test_cNi7sNeB7fiW0Ni80g0gw05",
+    "pro": "https://buy.stripe.com/test_6oU14pfFbb2G0Ni0xO0gw06",
+    "reset": "https://buy.stripe.com/test_6oU8wRcsZc6K9jO3K00gw07"
+  },
+  "support": {
+    "supportEmail": "admin@slendystuff.com",
+    "anydeskSourceUrl": "https://download.anydesk.com/AnyDesk.exe",
+    "anydeskDownloadUrl": "https://download.anydesk.com/AnyDesk.exe",
+    "anydeskLastCheckedAt": "2026-03-08T21:48:23.698Z",
+    "anydeskLastModified": "Fri, 13 Feb 2026 09:44:04 GMT",
+    "anydeskContentLength": "8044472",
+    "refreshIntervalHours": 12,
+    "intro": "Request a remote cleanup/support session through AnyDesk with minimal steps.",
+    "anydeskLastError": null
+  },
+  "analytics": {
+    "customTrackingEnabled": true
+  },
+  "products": [
+    {
+      "id": "pos-suite",
+      "title": "POS Suite",
+      "category": "Programs",
+      "summary": "Point-of-sale workflow with practical controls and cleaner daily operations.",
+      "priceLabel": "Custom Pricing",
+      "ctaLabel": "Request Details",
+      "ctaUrl": "mailto:admin@slendystuff.com?subject=POS%20Suite%20Inquiry",
+      "requires18Plus": false
+    },
+    {
+      "id": "system-optimizer",
+      "title": "System Optimizer",
+      "category": "Programs",
+      "summary": "Performance-focused optimization toolkit for Windows machines.",
+      "priceLabel": "Custom Pricing",
+      "ctaLabel": "Request Details",
+      "ctaUrl": "mailto:admin@slendystuff.com?subject=System%20Optimizer%20Inquiry",
+      "requires18Plus": false
+    },
+    {
+      "id": "discord-bot-kit",
+      "title": "Discord Bot Kit",
+      "category": "Bots",
+      "summary": "Automations and utility features for Discord communities.",
+      "priceLabel": "From $19.99",
+      "ctaLabel": "View Options",
+      "ctaUrl": "mailto:admin@slendystuff.com?subject=Discord%20Bot%20Inquiry",
+      "requires18Plus": false
+    },
+    {
+      "id": "remote-control-limited",
+      "title": "Remote Control Bot (Limited)",
+      "category": "Bots",
+      "summary": "Limited-control remote automation with strict bounds and safeguards.",
+      "priceLabel": "Custom Pricing",
+      "ctaLabel": "View Details",
+      "ctaUrl": "mailto:admin@slendystuff.com?subject=Remote%20Control%20Bot%20Inquiry",
+      "requires18Plus": true
+    }
+  ]
+}
