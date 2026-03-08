@@ -124,6 +124,7 @@
       "pos-suite": "Operational outcome: cleaner transaction flow, faster staff onboarding, and better reporting confidence.",
       "system-optimizer": "Operational outcome: faster systems, lower performance drag, and repeatable maintenance cadence.",
       "discord-bot-kit": "Operational outcome: stronger community workflows, faster moderation, and better member experience.",
+      "dnd5e-campaign-scribe": "Operational outcome: smoother sessions, less note chaos, and stronger campaign continuity for both DM and players.",
       "remote-control-limited": "Operational outcome: controlled remote automation with explicit boundaries and clear auditability."
     };
     const outcome = outcomeLines[newest.id] || "Operational outcome: purpose-built delivery aligned to real workflow goals.";

@@ -176,6 +176,27 @@
           "Owners needing fast moderation response and clean utility UX."
         ]
       },
+      "dnd5e-campaign-scribe": {
+        includes: [
+          "Dual-mode campaign tooling with dedicated DM controls and player-facing command set.",
+          "Session recap generation, quest/objective tracking, and searchable campaign timeline memory.",
+          "Initiative and encounter support with configurable dice, combat turns, and scene notes."
+        ],
+        deliverables: [
+          "Configured Discord bot package with channel/role layout recommendations for campaign flow.",
+          "DM and player command handbook with setup checklist, examples, and moderation controls.",
+          "Data structure templates for NPC logs, loot tracking, session summaries, and arc progression."
+        ],
+        flow: [
+          "Map table style, campaign cadence, and what information should be tracked automatically.",
+          "Configure DM/player modules, run live sandbox sessions, and tune command responses.",
+          "Deploy to production server and iterate recap/quest formatting from play feedback."
+        ],
+        bestFit: [
+          "Dungeon Masters who need campaign continuity across long arcs and multiple players.",
+          "Player groups that want clear quest memory, recap clarity, and lower admin overhead between sessions."
+        ]
+      },
       "remote-control-limited": {
         includes: [
           "Bounded remote automation commands with explicit permission boundaries.",

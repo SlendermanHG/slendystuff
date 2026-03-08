@@ -7,6 +7,7 @@
   const status = document.querySelector("[data-custom-tool-status]");
   const ideaPrompt = document.querySelector("[data-idea-prompt]");
   const ideaGenerateButton = document.querySelector("[data-idea-generate]");
+  const ideaDeepRollButton = document.querySelector("[data-idea-deep-roll]");
   const ideaSaveButton = document.querySelector("[data-idea-save]");
   const ideaClearButton = document.querySelector("[data-idea-clear]");
   const ideaStatus = document.querySelector("[data-idea-status]");
@@ -35,6 +36,9 @@
 
   if (ideaGenerateButton) {
     ideaGenerateButton.addEventListener("click", onGenerateIdeas);
+  }
+  if (ideaDeepRollButton) {
+    ideaDeepRollButton.addEventListener("click", onDeepRollSpec);
   }
   if (ideaSaveButton) {
     ideaSaveButton.addEventListener("click", onSaveIdeaOutput);
@@ -153,6 +157,25 @@
     renderIdeaAnswer(currentIdeaOutput);
     setStatus(ideaStatus, `Idea output ready (${result.source}). Save it if you want it attached to your request.`, "ok");
     app.track("idea_generation_complete", { source: result.source, model: result.model });
+  }
+
+  function onDeepRollSpec() {
+    const prompt = String((ideaPrompt && ideaPrompt.value) || "").trim();
+    setStatus(ideaStatus, "Building full 7-section spec...", "");
+
+    const answer = buildDeepRollSpec(prompt, assistantRules, savedIdeaLogs);
+    currentIdeaOutput = {
+      id: createLocalId(),
+      createdAt: new Date().toISOString(),
+      prompt: prompt || "Deep roll template",
+      answer,
+      source: "deep-roll-template",
+      model: "template-v1"
+    };
+
+    renderIdeaAnswer(currentIdeaOutput);
+    setStatus(ideaStatus, "Deep roll ready. Save it if you want it attached to your request.", "ok");
+    app.track("idea_deep_roll_complete", { hasPrompt: Boolean(prompt) });
   }
 
   function onSaveIdeaOutput() {
@@ -307,6 +330,107 @@
       `Prompt: ${prompt}`,
       `Hardwired rules: ${String(rules || "").slice(0, 180)}`
     ].join("\n");
+  }
+
+  function buildDeepRollSpec(prompt, rules, history) {
+    const conceptTracks = [
+      "Outcome-first productized service with optional managed operations",
+      "Modular software package with paid expansion modules",
+      "Bot + dashboard bundle with recurring support and tuning"
+    ];
+    const audienceTracks = [
+      "small operations teams that need less manual work and fewer errors",
+      "community managers who need structured automation and auditability",
+      "service providers who need faster delivery with repeatable templates"
+    ];
+    const painTracks = [
+      "too much manual handling, inconsistent quality, and delayed response cycles",
+      "scattered tools, weak visibility, and no clear ownership of process health",
+      "support backlog growth and operational drift as usage scales"
+    ];
+    const architectureTracks = [
+      "Web front-end + API service + queue worker + event/log store + admin settings panel",
+      "Discord/automation worker + policy engine + telemetry pipeline + operator dashboard",
+      "Client app + orchestration API + scheduled jobs + reporting and alerting layer"
+    ];
+    const launchTracks = [
+      "Week 1 discovery and scope lock, Week 2-3 MVP build, Week 4 controlled launch",
+      "Sprint 1 architecture and prototype, Sprint 2 feature completion, Sprint 3 hardening",
+      "Phase A requirements and risk controls, Phase B build and QA, Phase C rollout and tuning"
+    ];
+    const pricingTracks = [
+      "Implementation fee + monthly support plan + priority response add-on",
+      "Starter/Scale/Managed tiers with clear feature and SLA boundaries",
+      "Base deployment + optional integrations + quarterly optimization retainer"
+    ];
+    const riskTracks = [
+      "scope creep, weak requirement clarity, and unmanaged integration dependencies",
+      "permission/security misconfiguration and missing audit events",
+      "handoff gaps, unclear ownership, and delayed issue response"
+    ];
+    const metricTracks = [
+      "time saved per workflow, error-rate reduction, and support queue age",
+      "active usage, completion rate of automated tasks, and incident volume",
+      "response-time adherence, user retention, and expansion conversion"
+    ];
+
+    const selectedPrompt =
+      prompt || "Flexible product/bot concept for mixed markets with room for future expansion.";
+    const recentPrompt = Array.isArray(history) && history.length > 0 ? history[0].prompt : "No prior saved prompts.";
+    const rulesSnippet = String(rules || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 180);
+
+    return [
+      "1. Offer Concept",
+      `- Input Focus: ${selectedPrompt}`,
+      `- Positioning: ${pickOne(conceptTracks)}.`,
+      "- Core Promise: deliver measurable operational gains with clear upgrade paths.",
+      "",
+      "2. Target Users + Pain Points",
+      `- Target Users: ${pickOne(audienceTracks)}.`,
+      `- Primary Pain: ${pickOne(painTracks)}.`,
+      "- Buying Trigger: current process is too slow, risky, or expensive to scale.",
+      "",
+      "3. Feature Scope (MVP vs Expansion)",
+      "- MVP Scope:",
+      "  - Core workflow automation, role-based controls, and baseline reporting.",
+      "  - Guided onboarding, template presets, and fail-safe guardrails.",
+      "- Expansion Scope:",
+      "  - Advanced analytics, premium automation packs, and partner integrations.",
+      "  - White-label options and dedicated managed operations lane.",
+      "",
+      "4. Technical Architecture",
+      `- Suggested Stack: ${pickOne(architectureTracks)}.`,
+      "- Data + Audit: event logs, action traces, and change history retained by policy.",
+      "- Control Layer: admin-configurable policies, feature flags, and access boundaries.",
+      "",
+      "5. Delivery Plan + Milestones",
+      `- Timeline Model: ${pickOne(launchTracks)}.`,
+      "- Milestone Gates: scope sign-off -> QA/UAT pass -> controlled release -> post-launch tuning.",
+      "- Communication: weekly status summary with decision/risk log.",
+      "",
+      "6. Pricing + Packaging",
+      `- Packaging Direction: ${pickOne(pricingTracks)}.`,
+      "- Commercial Notes: include clear support boundaries and paid escalation paths.",
+      "- Upsell Path: remote management bundle and premium SLA response windows.",
+      "",
+      "7. Risks + Controls + Success Metrics",
+      `- Key Risks: ${pickOne(riskTracks)}.`,
+      "- Controls: hard scope boundaries, audit logging, staged rollout, and rollback plan.",
+      `- Success Metrics: ${pickOne(metricTracks)}.`,
+      "",
+      `Context from latest saved prompt: ${recentPrompt}`,
+      `Hardwired rules snapshot: ${rulesSnippet || "No hardwired rules provided."}`
+    ].join("\n");
+  }
+
+  function pickOne(items) {
+    if (!Array.isArray(items) || items.length === 0) {
+      return "";
+    }
+    return items[Math.floor(Math.random() * items.length)];
   }
 
   function setStatus(node, message, type) {

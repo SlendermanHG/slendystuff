@@ -65,6 +65,16 @@
       "requires18Plus": false
     },
     {
+      "id": "dnd5e-campaign-scribe",
+      "title": "D&D 5e Campaign Scribe Bot",
+      "category": "Bots",
+      "summary": "Dual-mode Discord campaign assistant for both Dungeon Masters and players with recap generation, quest tracking, initiative support, and campaign memory tooling.",
+      "priceLabel": "From $24.99",
+      "ctaLabel": "View Options",
+      "ctaUrl": "mailto:admin@slendystuff.com?subject=D%26D%205e%20Campaign%20Scribe%20Bot%20Inquiry",
+      "requires18Plus": false
+    },
+    {
       "id": "remote-control-limited",
       "title": "Remote Control Bot (Limited)",
       "category": "Bots",
