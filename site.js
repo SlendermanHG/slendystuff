@@ -22,6 +22,7 @@
     if (heroSubtitle) heroSubtitle.textContent = config.brand.heroSubtitle;
 
     renderProducts(config.products || []);
+    initFunZone(config.products || []);
 
     app.track("page_view", { page: "home" });
   } catch (error) {
@@ -96,6 +97,46 @@
         });
       });
     });
+  }
+
+  function initFunZone(products) {
+    const rollIdeaButton = document.querySelector("[data-fun-roll-idea]");
+    const rollPricingButton = document.querySelector("[data-fun-roll-pricing]");
+    const ideaResult = document.querySelector("[data-fun-idea-result]");
+    const pricingResult = document.querySelector("[data-fun-pricing-result]");
+
+    if (rollIdeaButton && ideaResult) {
+      rollIdeaButton.addEventListener("click", () => {
+        const categories = [...new Set((products || []).map((item) => item.category).filter(Boolean))];
+        const category = categories[Math.floor(Math.random() * categories.length)] || "Automation";
+        const hooks = [
+          "starter setup + paid monthly management",
+          "one-time install + annual support renewal",
+          "niche-specific dashboard + premium analytics add-on",
+          "done-for-you deployment + optional training package",
+          "low-ticket entry tool + upsell to managed service"
+        ];
+        const hook = hooks[Math.floor(Math.random() * hooks.length)];
+        const message = `Build a ${category} offer with ${hook}.`;
+        ideaResult.textContent = message;
+        app.track("fun_zone_roll_idea", { category });
+      });
+    }
+
+    if (rollPricingButton && pricingResult) {
+      rollPricingButton.addEventListener("click", () => {
+        const patterns = [
+          "3-tier stack: Lite / Pro / Managed",
+          "One-time setup fee + recurring optimization plan",
+          "Monthly base + performance bonus tier",
+          "Starter bundle + feature packs",
+          "Per-seat plan + enterprise support retainer"
+        ];
+        const pick = patterns[Math.floor(Math.random() * patterns.length)];
+        pricingResult.textContent = pick;
+        app.track("fun_zone_roll_pricing", { pattern: pick });
+      });
+    }
   }
 
   function escapeHtml(value) {

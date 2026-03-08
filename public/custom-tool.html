@@ -40,6 +40,30 @@
         <p class="muted">This form drafts an email to <strong>Operations@slendystuff.com</strong> with your project details.</p>
       </div>
 
+      <article class="card idea-lab">
+        <h2>Idea Generation Lab</h2>
+        <p class="muted">Use AI brainstorming before sending your request. Save the useful outputs and attach them to your custom request.</p>
+        <div class="field">
+          <label for="ideaPrompt">What are you trying to build or solve?</label>
+          <textarea id="ideaPrompt" data-idea-prompt placeholder="Example: I need a Discord bot for ticket triage and order status updates for a gaming community."></textarea>
+        </div>
+        <div class="inline-actions">
+          <button class="btn" type="button" data-idea-generate>Generate Ideas</button>
+          <button class="btn btn-ghost" type="button" data-idea-save>Save Current Output</button>
+          <button class="btn btn-ghost" type="button" data-idea-clear>Clear Saved Logs</button>
+        </div>
+        <p class="status" data-idea-status></p>
+        <article class="card idea-answer" data-idea-answer>
+          <p class="muted">Generated idea output will appear here.</p>
+        </article>
+        <div class="idea-log-wrap">
+          <h3>Saved Idea Logs</h3>
+          <div class="idea-log" data-idea-log>
+            <p class="muted">No saved idea logs yet.</p>
+          </div>
+        </div>
+      </article>
+
       <div class="grid two">
         <article class="card sticker-panel">
           <h2>Base Questions</h2>
@@ -109,6 +133,11 @@
             <div class="field">
               <label for="notes">Project Overview / Notes / Comments</label>
               <textarea id="notes" name="notes" placeholder="Anything else that helps scope the project."></textarea>
+            </div>
+
+            <div class="field">
+              <label><input type="checkbox" name="attachIdeaLog" value="yes" checked> Attach saved Idea Generation logs to this request</label>
+              <p class="muted" data-idea-attach-summary>Saved logs attached: 0</p>
             </div>
 
             <div class="inline-actions">

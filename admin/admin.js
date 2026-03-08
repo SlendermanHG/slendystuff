@@ -27,6 +27,8 @@
     refreshIntervalHours: document.querySelector("[name='refreshIntervalHours']"),
     supportIntro: document.querySelector("[name='supportIntro']"),
     customTrackingEnabled: document.querySelector("[name='customTrackingEnabled']"),
+    ideaAssistantEnabled: document.querySelector("[name='ideaAssistantEnabled']"),
+    ideaHardwiredRules: document.querySelector("[name='ideaHardwiredRules']"),
     protonDriveLogPath: document.querySelector("[name='protonDriveLogPath']"),
     gaMeasurementId: document.querySelector("[name='gaMeasurementId']"),
     metaPixelId: document.querySelector("[name='metaPixelId']"),
@@ -141,6 +143,10 @@
     formRefs.supportIntro.value = settings.support.intro || "";
 
     formRefs.customTrackingEnabled.checked = settings.analytics.customTrackingEnabled !== false;
+    formRefs.ideaAssistantEnabled.checked = !settings.aiAssistant || settings.aiAssistant.enabled !== false;
+    formRefs.ideaHardwiredRules.value =
+      (settings.aiAssistant && settings.aiAssistant.hardwiredRules) ||
+      "You are Slendy Stuff Idea Assistant. Generate practical product and automation concepts with clear scope, audience, and monetization direction.";
 
     formRefs.protonDriveLogPath.value = secrets.protonDriveLogPath || "";
     formRefs.gaMeasurementId.value = secrets.gaMeasurementId || "";
@@ -221,6 +227,10 @@
       },
       analytics: {
         customTrackingEnabled: formRefs.customTrackingEnabled.checked
+      },
+      aiAssistant: {
+        enabled: formRefs.ideaAssistantEnabled.checked,
+        hardwiredRules: formRefs.ideaHardwiredRules.value
       },
       products: collectProducts()
     };

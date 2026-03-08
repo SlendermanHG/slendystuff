@@ -29,6 +29,10 @@
     "gaMeasurementId": "",
     "metaPixelId": ""
   },
+  "aiAssistant": {
+    "enabled": true,
+    "hardwiredRules": "You are Slendy Stuff Idea Assistant. Generate practical product and automation concepts with clear scope, audience, and monetization direction. Avoid illegal or abusive use-cases."
+  },
   "products": [
     {
       "id": "pos-suite",

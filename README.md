@@ -48,6 +48,13 @@ Open:
 Default path is set in `data/secrets.json` as `protonDriveLogPath`.
 Set it to your Proton Drive folder path to persist logs there.
 
+## Idea assistant + hardwired rules
+- Custom Tool page now includes an AI Idea Generation Lab.
+- Saved idea logs are stored in browser local storage and can be attached to custom tool requests.
+- Backend endpoint: `POST /api/idea-assistant/generate`.
+- Configure hardwired assistant rules in admin page under `Idea Assistant Rules`.
+- To use live OpenAI generation, set `apiKeys.openai` in admin settings (or `data/secrets.json`).
+
 ## AnyDesk auto-link refresh
 Backend checks `support.anydeskSourceUrl` every `refreshIntervalHours` (default `12`) and updates the active download URL.
 

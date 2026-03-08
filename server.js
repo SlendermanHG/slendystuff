@@ -63,6 +63,11 @@ const defaultSettings = {
   analytics: {
     customTrackingEnabled: true
   },
+  aiAssistant: {
+    enabled: true,
+    hardwiredRules:
+      "You are Slendy Stuff Idea Assistant. Generate practical product and automation concepts with clear scope, audience, and monetization direction. Avoid illegal or abusive use-cases."
+  },
   products: [
     {
       id: "pos-suite",
@@ -183,8 +188,15 @@ function normalizeSettings(payload) {
     stripeLinks: { ...defaultSettings.stripeLinks, ...(payload.stripeLinks || {}) },
     support: { ...defaultSettings.support, ...(payload.support || {}) },
     analytics: { ...defaultSettings.analytics, ...(payload.analytics || {}) },
+    aiAssistant: { ...defaultSettings.aiAssistant, ...(payload.aiAssistant || {}) },
     products: Array.isArray(payload.products) ? payload.products : defaultSettings.products
   };
+
+  merged.aiAssistant.enabled = merged.aiAssistant.enabled !== false;
+  merged.aiAssistant.hardwiredRules = safeString(
+    merged.aiAssistant.hardwiredRules,
+    defaultSettings.aiAssistant.hardwiredRules
+  ).trim();
 
   merged.products = merged.products
     .filter((item) => item && typeof item === "object")
@@ -591,6 +603,10 @@ function getPublicConfig() {
       gaMeasurementId: secretsCache.gaMeasurementId,
       metaPixelId: secretsCache.metaPixelId
     },
+    aiAssistant: {
+      enabled: settingsCache.aiAssistant.enabled !== false,
+      hardwiredRules: settingsCache.aiAssistant.hardwiredRules
+    },
     account: {
       enabled: true,
       supportPolicy: "Free remote support is available for purchases made within the last 365 days. Otherwise paid support applies."
@@ -675,6 +691,126 @@ function scheduleAnydeskRefresh() {
       // No-op
     });
   }, intervalMs);
+}
+
+function extractResponseText(payload) {
+  if (!payload || typeof payload !== "object") {
+    return "";
+  }
+
+  if (typeof payload.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  const output = Array.isArray(payload.output) ? payload.output : [];
+  const pieces = [];
+  for (const item of output) {
+    const content = Array.isArray(item && item.content) ? item.content : [];
+    for (const node of content) {
+      if (node && node.type === "output_text" && typeof node.text === "string") {
+        pieces.push(node.text);
+      }
+    }
+  }
+
+  return pieces.join("\n").trim();
+}
+
+function buildFallbackIdeaResponse(prompt, rules) {
+  const cleanedPrompt = safeString(prompt, "").trim();
+  const ideas = [
+    "Offer a tiered starter/pro package with optional monthly management add-on.",
+    "Ship a narrow MVP first, then upsell integrations, dashboards, and automations.",
+    "Bundle setup service + support plan so implementation is easy for non-technical buyers.",
+    "Create an industry-specific variant page with copy tuned to one niche audience.",
+    "Add a recurring maintenance bot service to stabilize monthly revenue."
+  ];
+
+  const shuffled = ideas.sort(() => Math.random() - 0.5).slice(0, 3);
+  return [
+    "Here are fast scoped idea directions you can build from right now:",
+    ...shuffled.map((idea, index) => `${index + 1}. ${idea}`),
+    "",
+    `Prompt focus: ${cleanedPrompt || "General idea generation"}`,
+    `Hardwired rules in effect: ${safeString(rules, "").slice(0, 180)}`
+  ].join("\n");
+}
+
+async function generateIdeaAssistantReply({ prompt, history, rules }) {
+  const apiKey = safeString(secretsCache && secretsCache.apiKeys && secretsCache.apiKeys.openai, "").trim();
+  if (!apiKey) {
+    return { text: buildFallbackIdeaResponse(prompt, rules), source: "fallback-no-api-key", model: "local-fallback" };
+  }
+
+  const compactHistory = Array.isArray(history)
+    ? history
+        .filter((entry) => entry && typeof entry === "object")
+        .slice(-6)
+        .map((entry) => ({
+          prompt: safeString(entry.prompt, "").slice(0, 700),
+          answer: safeString(entry.answer, "").slice(0, 1200),
+          createdAt: safeString(entry.createdAt, "")
+        }))
+    : [];
+
+  const body = {
+    model: "gpt-4.1-mini",
+    input: [
+      {
+        role: "system",
+        content: [
+          {
+            type: "input_text",
+            text: rules || defaultSettings.aiAssistant.hardwiredRules
+          }
+        ]
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: JSON.stringify(
+              {
+                task: "Generate practical product and automation ideas for Slendy Stuff.",
+                prompt: safeString(prompt, "").slice(0, 2000),
+                recentIdeaLog: compactHistory
+              },
+              null,
+              2
+            )
+          }
+        ]
+      }
+    ],
+    max_output_tokens: 700
+  };
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const text = extractResponseText(payload);
+  if (!text) {
+    throw new Error("OpenAI returned an empty response.");
+  }
+
+  return {
+    text,
+    source: "openai",
+    model: safeString(payload.model, "gpt-4.1-mini"),
+    responseId: safeString(payload.id, "")
+  };
 }
 
 app.use(cookieParser());
@@ -837,6 +973,63 @@ app.post("/api/track", async (req, res) => {
   }
 });
 
+app.post("/api/idea-assistant/generate", async (req, res) => {
+  try {
+    if (settingsCache.aiAssistant.enabled === false) {
+      return res.status(403).json({ ok: false, error: "Idea assistant is disabled in admin settings." });
+    }
+
+    const prompt = safeString(req.body.prompt, "").trim();
+    const history = Array.isArray(req.body.history) ? req.body.history : [];
+    const clientTimezone = safeString(req.body.clientTimezone, "");
+    if (!prompt) {
+      return res.status(400).json({ ok: false, error: "Prompt is required." });
+    }
+    if (prompt.length > 3000) {
+      return res.status(400).json({ ok: false, error: "Prompt is too long." });
+    }
+
+    const rules = safeString(settingsCache.aiAssistant.hardwiredRules, defaultSettings.aiAssistant.hardwiredRules);
+
+    let result;
+    try {
+      result = await generateIdeaAssistantReply({ prompt, history, rules });
+    } catch (error) {
+      result = {
+        text: buildFallbackIdeaResponse(prompt, rules),
+        source: "fallback-error",
+        model: "local-fallback",
+        error: safeString(error.message, "Unknown generation error")
+      };
+    }
+
+    await appendLog(
+      "idea-assistant",
+      {
+        prompt,
+        promptLength: prompt.length,
+        replyLength: result.text.length,
+        source: result.source,
+        model: result.model,
+        responseId: safeString(result.responseId, ""),
+        error: safeString(result.error, ""),
+        clientTimezone
+      },
+      req
+    );
+
+    res.json({
+      ok: true,
+      answer: result.text,
+      source: result.source,
+      model: result.model,
+      hardwiredRules: rules
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: safeString(error.message, "Idea assistant failure") });
+  }
+});
+
 app.post("/api/age-verify", async (req, res) => {
   try {
     const answer = safeString(req.body.answer, "unknown").toLowerCase();
@@ -925,6 +1118,19 @@ app.post("/api/support/request", async (req, res) => {
 
 app.post("/api/tool-request", async (req, res) => {
   try {
+    const ideaLog = Array.isArray(req.body.ideaLog)
+      ? req.body.ideaLog
+          .filter((entry) => entry && typeof entry === "object")
+          .slice(-20)
+          .map((entry) => ({
+            createdAt: safeString(entry.createdAt, nowIso()),
+            prompt: safeString(entry.prompt, "").slice(0, 1200),
+            answer: safeString(entry.answer, "").slice(0, 4000),
+            source: safeString(entry.source, ""),
+            model: safeString(entry.model, "")
+          }))
+      : [];
+
     const requestDetails = {
       name: safeString(req.body.name, "Anonymous"),
       email: safeString(req.body.email, ""),
@@ -937,6 +1143,8 @@ app.post("/api/tool-request", async (req, res) => {
         : [],
       budget: safeString(req.body.budget, ""),
       notes: safeString(req.body.notes, ""),
+      attachIdeaLog: req.body.attachIdeaLog !== false,
+      ideaLog,
       clientTimezone: safeString(req.body.clientTimezone, "")
     };
 
