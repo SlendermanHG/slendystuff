@@ -14,6 +14,8 @@
   const purchasesNode = document.querySelector("[data-purchases-list]");
   const historyNode = document.querySelector("[data-support-history]");
   const logoutButton = document.querySelector("[data-logout-account]");
+  const ACCOUNT_BACKEND_REQUIRED_MESSAGE =
+    "Account login requires backend API hosting. This domain is currently serving static GitHub Pages files only.";
 
   try {
     const config = await app.fetchPublicConfig();
@@ -45,6 +47,9 @@
         });
         const result = await parseJson(response);
         if (!response.ok || !result.ok) {
+          if (isBackendApiUnavailable(response, result)) {
+            throw new Error(ACCOUNT_BACKEND_REQUIRED_MESSAGE);
+          }
           throw new Error(result.error || "Unable to create account.");
         }
 
@@ -71,6 +76,9 @@
         });
         const result = await parseJson(response);
         if (!response.ok || !result.ok) {
+          if (isBackendApiUnavailable(response, result)) {
+            throw new Error(ACCOUNT_BACKEND_REQUIRED_MESSAGE);
+          }
           throw new Error(result.error || "Unable to sign in.");
         }
 
@@ -95,6 +103,13 @@
       const response = await fetch("/api/auth/session");
       const session = await parseJson(response);
 
+      if (isBackendApiUnavailable(response, session)) {
+        showAuth();
+        setStatus(loginStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
+        setStatus(registerStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
+
       if (!response.ok || !session.ok || !session.authenticated) {
         showAuth();
         return;
@@ -102,6 +117,12 @@
 
       const summaryRes = await fetch("/api/account/summary");
       const summary = await parseJson(summaryRes);
+      if (isBackendApiUnavailable(summaryRes, summary)) {
+        showAuth();
+        setStatus(loginStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
+        setStatus(registerStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
       if (!summaryRes.ok || !summary.ok) {
         showAuth();
         return;
@@ -111,7 +132,8 @@
       showDashboard();
     } catch {
       showAuth();
-      setStatus(loginStatus, "Backend account APIs are unavailable in static Pages mode.", "error");
+      setStatus(loginStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
+      setStatus(registerStatus, ACCOUNT_BACKEND_REQUIRED_MESSAGE, "error");
     }
   }
 
@@ -172,6 +194,15 @@
     } catch {
       return { ok: false, error: "Invalid response" };
     }
+  }
+
+  function isBackendApiUnavailable(response, payload) {
+    const contentType = String((response && response.headers && response.headers.get("content-type")) || "").toLowerCase();
+    const error = String((payload && payload.error) || "").toLowerCase();
+    return (
+      (response && response.status === 404 && contentType.includes("text/html")) ||
+      error.includes("invalid response")
+    );
   }
 
   function escapeHtml(value) {

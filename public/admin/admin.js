@@ -40,6 +40,8 @@
 
   let currentSettings = null;
   let currentSecrets = null;
+  const ADMIN_BACKEND_REQUIRED_MESSAGE =
+    "Admin login requires backend API hosting. This domain is currently serving static GitHub Pages files only.";
 
   init().catch((error) => {
     setStatus(loginStatus, error.message, "error");
@@ -94,6 +96,10 @@
 
       const payload = await parseJson(response);
       if (!response.ok || !payload.ok) {
+        if (isBackendApiUnavailable(response, payload)) {
+          setStatus(loginStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+          return;
+        }
         setStatus(loginStatus, payload.error || "Login failed.", "error");
         return;
       }
@@ -103,7 +109,7 @@
       setStatus(loginStatus, "", "");
       loginForm.reset();
     } catch {
-      setStatus(loginStatus, "Backend API is unavailable in GitHub Pages mode. Host server.js to enable admin saves.", "error");
+      setStatus(loginStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
     }
   }
 
@@ -117,6 +123,9 @@
     const payload = await parseJson(response);
 
     if (!response.ok || !payload.ok) {
+      if (isBackendApiUnavailable(response, payload)) {
+        throw new Error(ADMIN_BACKEND_REQUIRED_MESSAGE);
+      }
       throw new Error(payload.error || "Failed to load admin settings.");
     }
 
@@ -259,6 +268,10 @@
 
     const payload = await parseJson(response);
     if (!response.ok || !payload.ok) {
+      if (isBackendApiUnavailable(response, payload)) {
+        setStatus(saveStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
       setStatus(saveStatus, payload.error || "Save failed.", "error");
       return;
     }
@@ -278,6 +291,10 @@
 
     const payload = await parseJson(response);
     if (!response.ok || !payload.ok) {
+      if (isBackendApiUnavailable(response, payload)) {
+        setStatus(saveStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
       setStatus(saveStatus, payload.error || "AnyDesk refresh failed.", "error");
       return;
     }
@@ -317,6 +334,10 @@
     const result = await parseJson(response);
 
     if (!response.ok || !result.ok) {
+      if (isBackendApiUnavailable(response, result)) {
+        setStatus(adminPasswordStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
       setStatus(adminPasswordStatus, result.error || "Failed to update admin password.", "error");
       return;
     }
@@ -375,6 +396,15 @@
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#39;");
+  }
+
+  function isBackendApiUnavailable(response, payload) {
+    const contentType = String((response && response.headers && response.headers.get("content-type")) || "").toLowerCase();
+    const error = String((payload && payload.error) || "").toLowerCase();
+    return (
+      (response && response.status === 404 && contentType.includes("text/html")) ||
+      error.includes("invalid api response")
+    );
   }
 
   async function parseJson(response) {
