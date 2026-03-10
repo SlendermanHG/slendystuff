@@ -25,6 +25,7 @@
 
   const status = document.querySelector("[data-rwc-status]");
   const donateIframe = document.querySelector("[data-rwc-donate-iframe]");
+  const donateEmbedNote = document.querySelector("[data-rwc-embed-note]");
 
   try {
     const config = await app.fetchPublicConfig();
@@ -85,6 +86,7 @@
     setLink("[data-rwc-prayer]", church.links.prayerRequests);
     setLink("[data-rwc-giving]", church.links.giving);
     setLink("[data-rwc-giving-2]", church.links.giving);
+    setLink("[data-rwc-zeffy]", buildZeffyDirectUrl(church.links.zeffyEmbed, church.links.giving));
     setLink("[data-rwc-youtube]", church.links.youtube);
 
     const phoneHref = `tel:${String(church.phone || "").replace(/[^\d+]/g, "")}`;
@@ -94,6 +96,19 @@
     if (donateIframe && church.links.zeffyEmbed) {
       donateIframe.src = church.links.zeffyEmbed;
     }
+
+    if (donateEmbedNote) {
+      donateEmbedNote.textContent = "If the embedded form does not load in your browser, use the secure Zeffy donation button.";
+    }
+  }
+
+  function buildZeffyDirectUrl(embedUrl, givingUrl) {
+    const embed = String(embedUrl || "").trim();
+    if (embed && embed.includes("/embed/donation-form/")) {
+      return embed.replace("/embed/donation-form/", "/donation-form/");
+    }
+
+    return String(givingUrl || "").trim() || defaults.links.giving;
   }
 
   function setText(selector, value) {
