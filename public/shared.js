@@ -151,11 +151,11 @@
       note.dataset.topNote = "true";
       note.innerHTML = `
         <div class="shell top-note-grid">
-          <p><strong>Why this site is dense:</strong> I maintain many versions and niches at once. Home explains direction, Products page shows active offers, and Custom Intake captures new builds fast.</p>
+          <p><strong>Fast navigation mode:</strong> Products is your direct catalog, Custom Intake is for net-new builds, and Support is for immediate technical help.</p>
           <div class="top-note-actions">
-            <a href="/products.html">Open Products</a>
-            <a href="/custom-tool.html">Open Intake</a>
-            <a href="/support.html">Open Support</a>
+            <a href="/products.html">Catalog</a>
+            <a href="/custom-tool.html">Custom Intake</a>
+            <a href="/support.html">Support</a>
           </div>
         </div>
       `;
@@ -194,7 +194,7 @@
       helper.innerHTML = `
         <button class="helper-toggle" type="button" aria-expanded="false" aria-controls="site-helper-panel" data-helper-toggle>
           <span class="helper-face" aria-hidden="true">CLP</span>
-          <span class="helper-toggle-label">Need help fast?</span>
+          <span class="helper-toggle-label">Launch Assistant</span>
         </button>
         <section class="helper-panel hidden" id="site-helper-panel" data-helper-panel aria-live="polite">
           <header class="helper-head">
@@ -298,7 +298,7 @@
           return {
             message: eligibility.eligible
               ? `You are signed in as ${signedEmail}. Your support status is currently free within the active window.`
-              : `You are signed in as ${signedEmail}. I can help route you to paid support or product setup now.`,
+              : `You are signed in as ${signedEmail}. Choose paid support or product setup to continue.`,
             actions: [
               { label: "Open Account Center", href: "/account.html", eventName: "helper_account_center" },
               { label: "Open Tech Support", href: "/support.html", variant: "ghost", eventName: "helper_support" }
@@ -307,7 +307,7 @@
         }
 
         return {
-          message: "Create an account to save purchase history and auto-check free support eligibility for future sessions.",
+            message: "Create an account to keep purchase history and automatically check support eligibility on future tickets.",
           actions: [
             { label: "Create Account", href: "/account.html", eventName: "helper_account_create" },
             { label: "Browse Products", href: "/products.html", variant: "ghost", eventName: "helper_browse_products" }
@@ -322,7 +322,7 @@
         });
 
         return {
-          message: "Need automation? Start with these bot-focused options and I can point you to custom tailoring next.",
+          message: "Need automation? Start with these bot-focused options and move to custom tailoring when ready.",
           actions: [
             ...picks.map((item, index) => productAction(item, index === 0 ? "btn" : "ghost")),
             ...(!session.authenticated ? [{ label: "Create Account First", href: "/account.html", variant: "ghost", eventName: "helper_account_create" }] : [])
@@ -337,7 +337,7 @@
         });
 
         return {
-          message: "Need software-focused tools? These are program-centric offers that fit optimization and operations.",
+          message: "Need software-focused tools? These offers are built for optimization and operations outcomes.",
           actions: picks.map((item, index) => productAction(item, index === 0 ? "btn" : "ghost"))
         };
       }
@@ -345,7 +345,7 @@
       if (intent === "support") {
         return {
           message: session.authenticated
-            ? "I can route you to support with your account context attached for faster handling."
+            ? "Support can use your account context for faster handling."
             : "For best support routing, sign in first so purchase-based free support can be checked automatically.",
           actions: [
             { label: "Open Tech Support", href: "/support.html", eventName: "helper_support" },
@@ -364,8 +364,8 @@
 
         return {
           message: current
-            ? `Reading ${current.title}. Want alternatives in the same lane or direct support for setup?`
-            : "I can point you to products fast. Tell me if you want bots, programs, or direct support.",
+            ? `Viewing ${current.title}. Want alternatives in the same lane or direct setup help?`
+            : "Need a fast route? Pick bots, programs, or support and continue in one click.",
           actions: [
             ...(related.length ? related.map((item, index) => productAction(item, index === 0 ? "btn" : "ghost")) : []),
             { label: "Get Setup Help", href: "/support.html", variant: "ghost", eventName: "helper_support" }
@@ -388,8 +388,8 @@
       const starter = this.pickProducts(products, () => true);
       return {
         message: session.authenticated
-          ? "Welcome back. Pick a lane and I will guide you to the right product or support flow."
-          : "I can help you find the right product quickly, then you can create an account to track support and purchases.",
+          ? "Welcome back. Pick a lane and continue through product or support flow."
+          : "Find the right product quickly, then create an account to track support and purchases.",
         actions: [
           ...starter.map((item, index) => productAction(item, index === 0 ? "btn" : "ghost")),
           ...(!session.authenticated ? [{ label: "Create Account", href: "/account.html", variant: "ghost", eventName: "helper_account_create" }] : [])

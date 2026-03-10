@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Custom Tool Request | Slendy Stuff</title>
-  <meta name="description" content="Request a custom program, bot, or tailored remote management setup.">
+  <title>Custom Build Intake | Slendy Stuff</title>
+  <meta name="description" content="Submit requirements for a custom software build, automation workflow, or managed service system.">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -19,12 +19,12 @@
 
       <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
 
-            <nav class="site-nav" data-nav aria-label="Primary">
+      <nav class="site-nav" data-nav aria-label="Primary">
         <a href="/">Home</a>
         <a href="/products.html">Products</a>
-        <a href="/#remote-management">Remote Management</a>
-        <a href="/custom-tool.html">Custom Tool Request</a>
-        <a href="/support.html">Tech Support</a>
+        <a href="/#remote-management">Managed Ops</a>
+        <a href="/custom-tool.html">Custom Build</a>
+        <a href="/support.html">Support</a>
         <a href="/contact.html">Contact</a>
         <a href="/account.html">Account</a>
         <a href="/about.html">About</a>
@@ -36,20 +36,20 @@
     <section class="section shell chaos-burst">
       <div class="section-head">
         <p class="eyebrow">Custom Build Intake</p>
-        <h1>Request a custom tool, bot, or management workflow</h1>
-        <p class="muted">This form drafts an email to <strong>Operations@slendystuff.com</strong> with your project details.</p>
+        <h1>Turn fast-moving ideas into a controlled build specification</h1>
+        <p class="muted">Use the AI lab to shape requirements, then submit one structured intake with context and priority details.</p>
       </div>
 
       <article class="card idea-lab">
-        <h2>Idea Generation Lab</h2>
-        <p class="muted">Use AI brainstorming before sending your request. Save the useful outputs and attach them to your custom request.</p>
+        <h2>Idea Jump Pad</h2>
+        <p class="muted">Generate draft concepts quickly, save the strongest ones, and attach them directly to your request.</p>
         <div class="field">
-          <label for="ideaPrompt">What are you trying to build or solve?</label>
-          <textarea id="ideaPrompt" data-idea-prompt placeholder="Example: I need a Discord bot for ticket triage and order status updates for a gaming community."></textarea>
+          <label for="ideaPrompt">What are you trying to build or fix?</label>
+          <textarea id="ideaPrompt" data-idea-prompt placeholder="Example: I need an automation flow for onboarding, support triage, and recurring follow-up tasks."></textarea>
         </div>
         <div class="inline-actions">
           <button class="btn" type="button" data-idea-generate>Generate Ideas</button>
-          <button class="btn" type="button" data-idea-deep-roll>Deep Roll (7-Section Spec)</button>
+          <button class="btn" type="button" data-idea-deep-roll>Deep Roll Spec</button>
           <button class="btn btn-ghost" type="button" data-idea-save>Save Current Output</button>
           <button class="btn btn-ghost" type="button" data-idea-clear>Clear Saved Logs</button>
         </div>
@@ -67,17 +67,17 @@
 
       <div class="grid two">
         <article class="card sticker-panel">
-          <h2>Base Questions</h2>
+          <h2>Required Clarity Signals</h2>
           <ul class="list">
-            <li>What exactly do you want built?</li>
-            <li>How will it be used in your workflow?</li>
-            <li>Do you need remote management included?</li>
-            <li>What timeline and budget range are you targeting?</li>
+            <li>What outcome should this system create?</li>
+            <li>Who uses it and how often?</li>
+            <li>What tools must integrate with it?</li>
+            <li>What timeline and budget constraints matter most?</li>
           </ul>
         </article>
 
         <article class="card">
-          <h2>Request Form</h2>
+          <h2>Submit Intake</h2>
           <form data-custom-tool-form>
             <div class="form-grid">
               <div class="field">
@@ -92,13 +92,13 @@
 
             <div class="form-grid">
               <div class="field">
-                <label for="toolType">What are you requesting?</label>
+                <label for="toolType">Request Type</label>
                 <select id="toolType" name="toolType">
                   <option value="program">Program / Desktop Tool</option>
                   <option value="discord-bot">Discord Bot</option>
-                  <option value="automation">Automation Script/System</option>
-                  <option value="remote-management">Remote Management Service</option>
-                  <option value="hybrid">Hybrid / Multi-part Project</option>
+                  <option value="automation">Automation Workflow</option>
+                  <option value="remote-management">Managed Operations</option>
+                  <option value="hybrid">Hybrid System</option>
                 </select>
               </div>
               <div class="field">
@@ -108,36 +108,36 @@
             </div>
 
             <div class="field">
-              <label for="whatWant">What do you want built?</label>
-              <textarea id="whatWant" name="whatWant" required placeholder="Describe features, behavior, and expected outcome."></textarea>
+              <label for="whatWant">What should be built?</label>
+              <textarea id="whatWant" name="whatWant" required placeholder="List core features and expected result."></textarea>
             </div>
 
             <div class="field">
-              <label for="howUsed">What is it for / how will it be used?</label>
-              <textarea id="howUsed" name="howUsed" required placeholder="Describe use case, users, and business context."></textarea>
+              <label for="howUsed">How will it be used?</label>
+              <textarea id="howUsed" name="howUsed" required placeholder="Describe users, frequency, and workflow context."></textarea>
             </div>
 
             <fieldset class="fieldset-box">
-              <legend>Remote Management Tailoring</legend>
+              <legend>Managed Operations Preferences</legend>
               <label><input type="checkbox" name="remoteOptions" value="monitoring"> Monitoring and alerts</label>
               <label><input type="checkbox" name="remoteOptions" value="maintenance"> Scheduled maintenance</label>
-              <label><input type="checkbox" name="remoteOptions" value="incident-response"> Incident response support</label>
+              <label><input type="checkbox" name="remoteOptions" value="incident-response"> Incident response</label>
               <label><input type="checkbox" name="remoteOptions" value="performance-tuning"> Performance tuning</label>
-              <label><input type="checkbox" name="remoteOptions" value="none"> No remote management needed</label>
+              <label><input type="checkbox" name="remoteOptions" value="none"> No managed ops needed</label>
             </fieldset>
 
             <div class="field">
-              <label for="budget">Budget or Range (optional)</label>
+              <label for="budget">Budget Range (optional)</label>
               <input id="budget" name="budget" placeholder="Example: <$500, $1k-$3k, TBD">
             </div>
 
             <div class="field">
-              <label for="notes">Project Overview / Notes / Comments</label>
-              <textarea id="notes" name="notes" placeholder="Anything else that helps scope the project."></textarea>
+              <label for="notes">Additional Notes</label>
+              <textarea id="notes" name="notes" placeholder="Dependencies, compliance needs, preferred stack, or anything that reduces ambiguity."></textarea>
             </div>
 
             <div class="field">
-              <label><input type="checkbox" name="attachIdeaLog" value="yes" checked> Attach saved Idea Generation logs to this request</label>
+              <label><input type="checkbox" name="attachIdeaLog" value="yes" checked> Attach saved idea logs to this request</label>
               <p class="muted" data-idea-attach-summary>Saved logs attached: 0</p>
             </div>
 
@@ -153,7 +153,7 @@
 
   <footer class="footer">
     <div class="shell footer-grid">
-      <p class="muted">Operations requests are sent to <a href="mailto:Operations@slendystuff.com">Operations@slendystuff.com</a>.</p>
+      <p class="muted">Intake submissions route to <a href="mailto:Operations@slendystuff.com">Operations@slendystuff.com</a>.</p>
     </div>
   </footer>
 

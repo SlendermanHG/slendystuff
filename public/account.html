@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Account | Slendy Stuff</title>
+  <title>Account Control | Slendy Stuff</title>
   <meta name="description" content="Create an account to track purchases, support eligibility, and request history.">
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -19,12 +19,12 @@
 
       <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
 
-            <nav class="site-nav" data-nav aria-label="Primary">
+      <nav class="site-nav" data-nav aria-label="Primary">
         <a href="/">Home</a>
         <a href="/products.html">Products</a>
-        <a href="/#remote-management">Remote Management</a>
-        <a href="/custom-tool.html">Custom Tool Request</a>
-        <a href="/support.html">Tech Support</a>
+        <a href="/#remote-management">Managed Ops</a>
+        <a href="/custom-tool.html">Custom Build</a>
+        <a href="/support.html">Support</a>
         <a href="/contact.html">Contact</a>
         <a href="/account.html">Account</a>
         <a href="/about.html">About</a>
@@ -35,10 +35,10 @@
   <main id="main">
     <section class="section shell chaos-burst">
       <div class="section-head">
-        <p class="eyebrow">Account Center</p>
-        <h1>Purchases, support eligibility, and return requests</h1>
+        <p class="eyebrow">Account Control</p>
+        <h1>Manage purchases, support eligibility, and request history</h1>
         <p class="muted" data-account-policy>Free remote support applies when a product purchase exists within the last 365 days. Otherwise paid support applies.</p>
-        <p class="muted">Account login requires backend API hosting. Static-only GitHub Pages deployments cannot process sign-in.</p>
+        <p class="muted">Account sign-in requires backend hosting. Static-only mirrors cannot process live authentication.</p>
       </div>
 
       <div class="grid two" data-account-auth>
@@ -89,7 +89,7 @@
           <p class="muted" data-account-user></p>
           <p class="muted" data-account-eligibility></p>
           <div class="inline-actions">
-            <a class="btn" href="/support.html">Open Support Request</a>
+            <a class="btn" href="/support.html">Open Support</a>
             <button class="btn btn-ghost" data-logout-account type="button">Logout</button>
           </div>
         </article>
@@ -107,9 +107,9 @@
         </div>
 
         <article class="card sticker-panel">
-          <h3>Saved Payment Methods</h3>
-          <p class="muted">Raw card data is not stored on this site. Saved payment methods should be handled through Stripe customer vaulting and customer portal integration.</p>
-          <p class="muted">Current status: backend account tracking is live, payment-method vault integration is pending Stripe API setup.</p>
+          <h3>Payment Method Security</h3>
+          <p class="muted">Raw card data is never stored in this site layer. Payment method vaulting should be handled by Stripe customer portal integrations.</p>
+          <p class="muted">Current status: account and support tracking are live, expanded billing self-service is planned next.</p>
         </article>
       </section>
     </section>
@@ -117,7 +117,7 @@
 
   <footer class="footer">
     <div class="shell footer-grid">
-      <p class="muted">Account + support policy management layer ready for backend hosting mode.</p>
+      <p class="muted">Account and support policy control center.</p>
     </div>
   </footer>
 

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Product | Slendy Stuff</title>
-  <meta name="description" content="Product details page with optional 18+ verification.">
+  <title>Product Detail | Slendy Stuff</title>
+  <meta name="description" content="Detailed overview, delivery scope, and implementation flow for this product.">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -19,12 +19,12 @@
 
       <button class="nav-toggle" data-nav-toggle aria-label="Toggle navigation">Menu</button>
 
-            <nav class="site-nav" data-nav aria-label="Primary">
+      <nav class="site-nav" data-nav aria-label="Primary">
         <a href="/">Home</a>
         <a href="/products.html">Products</a>
-        <a href="/#remote-management">Remote Management</a>
-        <a href="/custom-tool.html">Custom Tool Request</a>
-        <a href="/support.html">Tech Support</a>
+        <a href="/#remote-management">Managed Ops</a>
+        <a href="/custom-tool.html">Custom Build</a>
+        <a href="/support.html">Support</a>
         <a href="/contact.html">Contact</a>
         <a href="/account.html">Account</a>
         <a href="/about.html">About</a>
@@ -37,17 +37,20 @@
       <div data-product-content></div>
       <article class="card hidden" data-product-not-found>
         <h1>Product not found</h1>
-        <p class="muted">The requested item does not exist or has been removed.</p>
-        <a class="btn" href="/">Back to Home</a>
+        <p class="muted">The requested product lane is unavailable or has moved.</p>
+        <div class="inline-actions">
+          <a class="btn" href="/products.html">Open Product Matrix</a>
+          <a class="btn btn-ghost" href="/custom-tool.html">Request Custom Build</a>
+        </div>
       </article>
     </section>
   </main>
 
   <div class="overlay hidden" id="age-gate-overlay" role="dialog" aria-modal="true" aria-labelledby="age-gate-title">
     <article class="card overlay-card">
-      <p class="eyebrow">Age Verification</p>
+      <p class="eyebrow">Verification Layer</p>
       <h2 id="age-gate-title">Are you 18 or older?</h2>
-      <p class="muted">Your answer, IP, date/time, and timezone are logged for compliance.</p>
+      <p class="muted">This confirmation is required for restricted listings and is logged for compliance.</p>
       <div class="inline-actions">
         <button class="btn" data-age-answer="yes">Yes, continue</button>
         <button class="btn btn-ghost" data-age-answer="no">No, exit</button>
