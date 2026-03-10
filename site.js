@@ -151,54 +151,170 @@
     const rollPricingButton = document.querySelector("[data-fun-roll-pricing]");
     const ideaResult = document.querySelector("[data-fun-idea-result]");
     const pricingResult = document.querySelector("[data-fun-pricing-result]");
+    const industryInput = document.querySelector("[data-fun-industry]");
+    const outcomeInput = document.querySelector("[data-fun-outcome]");
+    const budgetInput = document.querySelector("[data-fun-budget]");
+    const timelineInput = document.querySelector("[data-fun-timeline]");
+    const volumeInput = document.querySelector("[data-fun-pricing-volume]");
+    const supportInput = document.querySelector("[data-fun-pricing-support]");
+    const riskInput = document.querySelector("[data-fun-pricing-risk]");
+    const offerInput = document.querySelector("[data-fun-pricing-offer]");
 
     if (rollIdeaButton && ideaResult) {
       rollIdeaButton.addEventListener("click", () => {
-        const categories = [...new Set((products || []).map((item) => item.category).filter(Boolean))];
-        const category = categories[Math.floor(Math.random() * categories.length)] || "Automation";
-        const audiences = [
-          "small operations teams",
-          "creators and community owners",
-          "managed service clients",
-          "high-volume support teams",
-          "multi-location operators"
+        const industry = industryInput ? industryInput.value : "Business";
+        const outcome = outcomeInput ? outcomeInput.value : "Increase Sales";
+        const budget = budgetInput ? budgetInput.value : "starter";
+        const timelineDays = Number(timelineInput ? timelineInput.value : "14");
+        const budgetLabelMap = {
+          starter: "starter budget",
+          growth: "growth budget",
+          scale: "scale budget"
+        };
+        const audienceMap = {
+          Retail: "store owners and front-line staff",
+          Creator: "fans, subscribers, and buyers",
+          Service: "leads and returning clients",
+          Community: "members and moderators",
+          Operations: "internal staff and managers"
+        };
+        const deliveryMap = {
+          7: "fast launch sprint",
+          14: "rapid two-week build",
+          30: "month-long production rollout",
+          60: "phased release with testing gates"
+        };
+        const offerTemplates = [
+          "Create a compact onboarding flow that turns first-time visitors into qualified leads.",
+          "Launch a done-for-you automation pack that removes repeat manual work from your team.",
+          "Introduce a support-focused workflow that resolves issues faster and reduces churn.",
+          "Deploy a conversion playbook that combines product education with guided checkout steps."
         ];
-        const coreOffers = [
-          "phase-based implementation package + optimization retainer",
-          "core product deployment + paid expansion modules",
-          "workflow automation stack + reporting dashboard add-on",
-          "done-for-you launch + managed maintenance cycle",
-          "foundation build + premium support SLA"
+        const firstStepTemplates = [
+          "Map the top 3 customer frustrations and convert each into one clear feature.",
+          "Publish one focused landing offer and route visitors to a single next action.",
+          "Set up a support response sequence with one-hour acknowledgement and follow-up checkpoints.",
+          "Create a weekly performance review using traffic, conversion, and request volume data."
         ];
-        const deliveryModes = [
-          "two-week discovery and architecture sprint",
-          "measured MVP release followed by phased feature drops",
-          "pilot rollout with usage analytics feedback loop",
-          "high-priority launch path with post-launch hardening",
-          "modular rollout matched to business-critical workflows"
+        const conversionHooks = [
+          "limited-time onboarding bonus",
+          "priority implementation slot",
+          "free setup audit for first clients",
+          "quarterly optimization add-on"
         ];
 
-        const audience = audiences[Math.floor(Math.random() * audiences.length)];
-        const offer = coreOffers[Math.floor(Math.random() * coreOffers.length)];
-        const delivery = deliveryModes[Math.floor(Math.random() * deliveryModes.length)];
-        const message = `Offer Concept: ${category} solution for ${audience}.\nMonetization: ${offer}.\nExecution Path: ${delivery}.`;
+        const productList = Array.isArray(products) ? products : [];
+        const productPool = productList.length ? productList : [{ id: "", title: "Custom Build", category: "Custom" }];
+        const matchedByOutcome = productPool.filter((item) => {
+          const category = String(item.category || "").toLowerCase();
+          if (outcome.includes("Support")) {
+            return category.includes("remote") || category.includes("bot");
+          }
+          if (outcome.includes("Manual")) {
+            return category.includes("program") || category.includes("automation");
+          }
+          if (outcome.includes("Retention")) {
+            return category.includes("bot") || category.includes("service");
+          }
+          return true;
+        });
+        const pool = matchedByOutcome.length ? matchedByOutcome : productPool;
+        const product = pool[Math.floor(Math.random() * pool.length)];
+        const offer = offerTemplates[Math.floor(Math.random() * offerTemplates.length)];
+        const firstStep = firstStepTemplates[Math.floor(Math.random() * firstStepTemplates.length)];
+        const hook = conversionHooks[Math.floor(Math.random() * conversionHooks.length)];
+        const actionUrl = product.id ? `/product.html?id=${encodeURIComponent(product.id)}` : "/custom-tool.html";
+        const actionLabel = product.id ? `Open ${product.title}` : "Open Custom Build Intake";
+        const message = [
+          `Adventure Brief (${industry} | ${budgetLabelMap[budget] || "starter budget"} | ${timelineDays}-day target)`,
+          "",
+          `1) Offer Direction`,
+          `${offer}`,
+          "",
+          `2) Best Audience`,
+          `Focus on ${audienceMap[industry] || "your highest-value buyer segment"} with a promise tied to "${outcome}".`,
+          "",
+          `3) First Week Action Plan`,
+          `- Day 1-2: ${firstStep}`,
+          `- Day 3-4: Build and publish the offer page with one clear CTA.`,
+          `- Day 5-7: Run outreach + support follow-up and measure response quality.`,
+          "",
+          `4) Conversion Hook`,
+          `Use a ${hook} to drive early decisions without heavy discounting.`,
+          "",
+          `5) Suggested Starting Product`,
+          `${product.title} (${product.category || "Custom"})`,
+          `Next Step: ${actionLabel} -> ${actionUrl}`
+        ].join("\n");
         ideaResult.textContent = message;
-        app.track("fun_zone_roll_idea", { category });
+        app.track("fun_zone_roll_idea", {
+          industry,
+          outcome,
+          budget,
+          timelineDays,
+          suggestedProduct: product.id || "custom"
+        });
       });
     }
 
     if (rollPricingButton && pricingResult) {
       rollPricingButton.addEventListener("click", () => {
-        const patterns = [
-          "3-tier structure: Foundation / Scale / Managed Ops with response-time guarantees.",
-          "Implementation fee + monthly optimization retainer + optional emergency support block.",
-          "Base plan + usage-triggered expansion modules tied to measurable ROI milestones.",
-          "Starter package + premium integration bundle + quarterly tuning cycle.",
-          "Per-team plan + enterprise governance add-on + dedicated launch concierge."
-        ];
-        const pick = patterns[Math.floor(Math.random() * patterns.length)];
-        pricingResult.textContent = pick;
-        app.track("fun_zone_roll_pricing", { pattern: pick });
+        const volume = volumeInput ? volumeInput.value : "low";
+        const support = supportInput ? supportInput.value : "standard";
+        const risk = riskInput ? riskInput.value : "balanced";
+        const offer = offerInput ? offerInput.value : "program";
+
+        const volumeBaseMap = { low: 79, mid: 179, high: 379 };
+        const supportMultiplierMap = { light: 1, standard: 1.35, priority: 1.7 };
+        const riskMultiplierMap = { safe: 1.15, balanced: 1, aggressive: 0.9 };
+        const offerLabels = {
+          program: "Software Program",
+          bot: "Bot / Automation",
+          managed: "Managed Service"
+        };
+        const testHooks = {
+          safe: "90-day reliability promise",
+          balanced: "7-day onboarding bonus",
+          aggressive: "48-hour fast-start offer"
+        };
+
+        const roundPrice = (value) => Math.max(25, Math.round(value / 5) * 5);
+        const base = volumeBaseMap[volume] || 79;
+        const supportFactor = supportMultiplierMap[support] || 1.35;
+        const riskFactor = riskMultiplierMap[risk] || 1;
+        const starter = roundPrice(base * supportFactor * riskFactor);
+        const growth = roundPrice(starter * 2.1);
+        const premium = roundPrice(starter * 3.4);
+        const setupFee = roundPrice(starter * 1.4);
+        const rushBlock = roundPrice(starter * 0.55);
+        const message = [
+          `Pricing Blueprint (${offerLabels[offer] || "Offer"} | ${volume} volume | ${support} support)`,
+          "",
+          `1) Entry Offer`,
+          `$${starter}/mo + $${setupFee} setup`,
+          `Includes core delivery, reporting snapshot, and support response baseline.`,
+          "",
+          `2) Growth Offer`,
+          `$${growth}/mo`,
+          `Adds optimization cycles, advanced automation, and outcome reviews.`,
+          "",
+          `3) Premium Offer`,
+          `$${premium}/mo`,
+          `Adds priority queue, strategic roadmap calls, and dedicated implementation windows.`,
+          "",
+          `4) Optional Add-On`,
+          `$${rushBlock} emergency/rush support block (one-time).`,
+          "",
+          `5) Conversion Test Plan`,
+          `- Test Hook: ${testHooks[risk] || "7-day onboarding bonus"}`,
+          `- Compare monthly plan vs annual prepay with a 10% incentive.`,
+          `- Put the offer in front of support and product pages, then track close rate by source.`,
+          "",
+          `Next Step: Open /custom-tool.html to request a custom quote using this structure.`
+        ].join("\n");
+
+        pricingResult.textContent = message;
+        app.track("fun_zone_roll_pricing", { volume, support, risk, offer, starter, growth, premium });
       });
     }
   }

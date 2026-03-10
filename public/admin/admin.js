@@ -9,9 +9,33 @@
   const refreshAnydeskButton = document.querySelector("[data-refresh-anydesk]");
   const adminPasswordForm = document.querySelector("[data-admin-password-form]");
   const adminPasswordStatus = document.querySelector("[data-admin-password-status]");
-
   const productTableBody = document.querySelector("[data-products-body]");
   const addProductButton = document.querySelector("[data-add-product]");
+
+  const tabs = Array.from(document.querySelectorAll("[data-admin-tab]"));
+  const views = Array.from(document.querySelectorAll("[data-admin-view]"));
+
+  const statsRefreshButton = document.querySelector("[data-admin-stats-refresh]");
+  const statsStatus = document.querySelector("[data-admin-stats-status]");
+  const statsGenerated = document.querySelector("[data-stats-generated]");
+  const topEventsList = document.querySelector("[data-top-events]");
+  const topProductsList = document.querySelector("[data-top-products]");
+  const statRefs = {
+    visitors24h: document.querySelector("[data-stat='visitors24h']"),
+    visitors7d: document.querySelector("[data-stat='visitors7d']"),
+    events24h: document.querySelector("[data-stat='events24h']"),
+    events7d: document.querySelector("[data-stat='events7d']"),
+    support24h: document.querySelector("[data-stat='support24h']"),
+    support7d: document.querySelector("[data-stat='support7d']"),
+    queueTotal: document.querySelector("[data-stat='queueTotal']"),
+    queueNew: document.querySelector("[data-stat='queueNew']"),
+    queueInProgress: document.querySelector("[data-stat='queueInProgress']"),
+    queueClosed: document.querySelector("[data-stat='queueClosed']")
+  };
+
+  const inboxRefreshButton = document.querySelector("[data-admin-inbox-refresh]");
+  const inboxStatus = document.querySelector("[data-admin-inbox-status]");
+  const supportRequestsBody = document.querySelector("[data-support-requests-body]");
 
   const formRefs = {
     brandName: document.querySelector("[name='brandName']"),
@@ -56,18 +80,54 @@
     if (authenticated) {
       await loadAdminData();
       showContent();
+      setActiveView("dashboard");
+      await refreshDashboardAndInbox();
     } else {
       showLogin();
     }
 
-    loginForm.addEventListener("submit", onLogin);
-    saveButton.addEventListener("click", onSave);
-    addProductButton.addEventListener("click", addProductRow);
-    logoutButton.addEventListener("click", onLogout);
-    refreshAnydeskButton.addEventListener("click", onRefreshAnydesk);
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => setActiveView(tab.dataset.adminTab || "dashboard"));
+    });
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", onLogin);
+    }
+    if (saveButton) {
+      saveButton.addEventListener("click", onSave);
+    }
+    if (addProductButton) {
+      addProductButton.addEventListener("click", addProductRow);
+    }
+    if (logoutButton) {
+      logoutButton.addEventListener("click", onLogout);
+    }
+    if (refreshAnydeskButton) {
+      refreshAnydeskButton.addEventListener("click", onRefreshAnydesk);
+    }
     if (adminPasswordForm) {
       adminPasswordForm.addEventListener("submit", onAdminPasswordChange);
     }
+    if (statsRefreshButton) {
+      statsRefreshButton.addEventListener("click", loadAdminStats);
+    }
+    if (inboxRefreshButton) {
+      inboxRefreshButton.addEventListener("click", loadSupportRequests);
+    }
+  }
+
+  async function refreshDashboardAndInbox() {
+    await Promise.allSettled([loadAdminStats(), loadSupportRequests()]);
+  }
+
+  function setActiveView(view) {
+    tabs.forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.adminTab === view);
+    });
+
+    views.forEach((section) => {
+      section.classList.toggle("hidden", section.dataset.adminView !== view);
+    });
   }
 
   async function checkSession() {
@@ -106,6 +166,8 @@
 
       await loadAdminData();
       showContent();
+      setActiveView("dashboard");
+      await refreshDashboardAndInbox();
       setStatus(loginStatus, "", "");
       loginForm.reset();
     } catch {
@@ -131,8 +193,165 @@
 
     currentSettings = payload.settings;
     currentSecrets = payload.secrets;
-
     applyToForm(currentSettings, currentSecrets);
+  }
+
+  async function loadAdminStats() {
+    setStatus(statsStatus, "Refreshing stats...", "");
+
+    const response = await fetch("/api/admin/stats", { credentials: "include" });
+    const payload = await parseJson(response);
+    if (!response.ok || !payload.ok) {
+      if (isBackendApiUnavailable(response, payload)) {
+        setStatus(statsStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
+      setStatus(statsStatus, payload.error || "Failed to load stats.", "error");
+      return;
+    }
+
+    applyStats(payload.stats || {});
+    setStatus(statsStatus, "Stats updated.", "ok");
+  }
+
+  function applyStats(stats) {
+    const traffic = stats.traffic || {};
+    const support = stats.support || {};
+
+    setNodeText(statRefs.visitors24h, formatNumber(traffic.visitors24h));
+    setNodeText(statRefs.visitors7d, formatNumber(traffic.visitors7d));
+    setNodeText(statRefs.events24h, formatNumber(traffic.events24h));
+    setNodeText(statRefs.events7d, formatNumber(traffic.events7d));
+    setNodeText(statRefs.support24h, formatNumber(support.requests24h));
+    setNodeText(statRefs.support7d, formatNumber(support.requests7d));
+    setNodeText(statRefs.queueTotal, formatNumber(support.queueTotal));
+    setNodeText(statRefs.queueNew, formatNumber(support.queueNew));
+    setNodeText(statRefs.queueInProgress, formatNumber(support.queueInProgress));
+    setNodeText(statRefs.queueClosed, formatNumber(support.queueClosed));
+    setNodeText(statsGenerated, formatDateTime(stats.generatedAt));
+
+    renderTopList(topEventsList, stats.topEvents || [], "No event data yet.");
+    renderTopList(topProductsList, stats.topProducts || [], "No product interaction data yet.");
+  }
+
+  function renderTopList(node, rows, emptyMessage) {
+    if (!node) {
+      return;
+    }
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      node.innerHTML = `<li class="muted">${escapeHtml(emptyMessage)}</li>`;
+      return;
+    }
+
+    node.innerHTML = rows
+      .map((row) => `<li><strong>${escapeHtml(row.label || "unknown")}</strong> <span class="muted">(${formatNumber(row.count)})</span></li>`)
+      .join("");
+  }
+
+  async function loadSupportRequests() {
+    setStatus(inboxStatus, "Refreshing inbox...", "");
+
+    const response = await fetch("/api/admin/support-requests", { credentials: "include" });
+    const payload = await parseJson(response);
+    if (!response.ok || !payload.ok) {
+      if (isBackendApiUnavailable(response, payload)) {
+        setStatus(inboxStatus, ADMIN_BACKEND_REQUIRED_MESSAGE, "error");
+        return;
+      }
+      setStatus(inboxStatus, payload.error || "Failed to load support inbox.", "error");
+      return;
+    }
+
+    renderSupportRequests(payload.requests || []);
+    setStatus(inboxStatus, `Inbox loaded: ${formatNumber((payload.requests || []).length)} ticket(s).`, "ok");
+  }
+
+  function renderSupportRequests(requests) {
+    if (!supportRequestsBody) {
+      return;
+    }
+
+    supportRequestsBody.innerHTML = "";
+    if (!Array.isArray(requests) || requests.length === 0) {
+      supportRequestsBody.innerHTML = `<tr><td colspan="8" class="muted">No support requests yet.</td></tr>`;
+      return;
+    }
+
+    requests.forEach((item) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>
+          <div>${escapeHtml(formatDateTime(item.createdAt))}</div>
+          <div class="muted">${escapeHtml(formatDateTime(item.updatedAt))}</div>
+        </td>
+        <td>
+          <div><strong>${escapeHtml(item.name || "Anonymous")}</strong></div>
+          <div>${escapeHtml(item.email || "No email")}</div>
+          <div class="muted">${escapeHtml(item.accountEmail ? `Account: ${item.accountEmail}` : "No linked account")}</div>
+        </td>
+        <td>
+          <div>${escapeHtml(item.issue || "")}</div>
+          <div class="muted">${escapeHtml(item.preferredTime ? `Preferred: ${item.preferredTime}` : "Preferred: not set")}</div>
+          <div class="muted">${escapeHtml((item.managementOptions || []).join(", ") || "No management options selected")}</div>
+        </td>
+        <td>${escapeHtml(item.serviceLevel || "Not specified")}</td>
+        <td>
+          <div>${escapeHtml(formatBillingLabel(item.billingStatus || "paid_support_required"))}</div>
+          <div class="muted">${escapeHtml(item.billingReason || "")}</div>
+        </td>
+        <td>
+          <select data-request-status>
+            ${buildStatusOption("new", item.status)}
+            ${buildStatusOption("in_progress", item.status)}
+            ${buildStatusOption("closed", item.status)}
+          </select>
+        </td>
+        <td><textarea data-request-notes>${escapeHtml(item.adminNotes || "")}</textarea></td>
+        <td>
+          <button class="btn btn-ghost" type="button" data-request-save>Save</button>
+          <p class="status" data-request-row-status></p>
+        </td>
+      `;
+
+      const save = tr.querySelector("[data-request-save]");
+      const status = tr.querySelector("[data-request-status]");
+      const notes = tr.querySelector("[data-request-notes]");
+      const rowStatus = tr.querySelector("[data-request-row-status]");
+
+      save.addEventListener("click", async () => {
+        save.disabled = true;
+        setStatus(rowStatus, "Saving...", "");
+        const result = await updateSupportRequest(item.id, status.value, notes.value);
+        save.disabled = false;
+        if (!result.ok) {
+          setStatus(rowStatus, result.error || "Failed to save.", "error");
+          return;
+        }
+        setStatus(rowStatus, "Saved.", "ok");
+        await loadAdminStats();
+      });
+
+      supportRequestsBody.appendChild(tr);
+    });
+  }
+
+  async function updateSupportRequest(requestId, status, adminNotes) {
+    try {
+      const response = await fetch(`/api/admin/support-requests/${encodeURIComponent(requestId)}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, adminNotes })
+      });
+      const payload = await parseJson(response);
+      if (!response.ok || !payload.ok) {
+        return { ok: false, error: payload.error || "Failed to update support request." };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Network error while updating support request." };
+    }
   }
 
   function applyToForm(settings, secrets) {
@@ -368,6 +587,51 @@
         };
       })
       .filter((item) => item.id.trim().length > 0 && item.title.trim().length > 0);
+  }
+
+  function formatDateTime(value) {
+    if (!value) {
+      return "--";
+    }
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) {
+      return "--";
+    }
+    return date.toLocaleString();
+  }
+
+  function formatNumber(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return "0";
+    }
+    return numeric.toLocaleString();
+  }
+
+  function formatBillingLabel(value) {
+    if (value === "free_support") {
+      return "Free Support";
+    }
+    if (value === "paid_support_required") {
+      return "Paid Support Required";
+    }
+    return value || "Unknown";
+  }
+
+  function buildStatusOption(value, currentValue) {
+    const labelMap = {
+      new: "New",
+      in_progress: "In Progress",
+      closed: "Closed"
+    };
+    const selected = value === currentValue ? "selected" : "";
+    return `<option value="${value}" ${selected}>${labelMap[value] || value}</option>`;
+  }
+
+  function setNodeText(node, value) {
+    if (node) {
+      node.textContent = String(value);
+    }
   }
 
   function setStatus(node, message, type) {

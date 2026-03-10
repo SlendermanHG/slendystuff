@@ -131,25 +131,112 @@
     <section class="section shell" id="fun-zone">
       <div class="section-head">
         <p class="eyebrow">Chaos Playground</p>
-        <h2>Fun tricks for fast idea jumps.</h2>
-        <p class="muted">Use these quick generators when you want a new angle before building your next product.</p>
+        <h2>Start your next product adventure.</h2>
+        <p class="muted">Answer a few quick questions and get a launch-ready concept with pricing you can test today.</p>
       </div>
       <div class="fun-zone-grid">
         <article class="card">
           <h3>Idea Dice</h3>
-          <p class="muted">Roll a random offer direction based on your current catalog style.</p>
+          <p class="muted">Tell us the business context and we generate a concrete offer path with immediate next steps.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label>Industry</label>
+              <select data-fun-industry>
+                <option value="Retail">Retail</option>
+                <option value="Creator">Creator Brand</option>
+                <option value="Service">Service Business</option>
+                <option value="Community">Online Community</option>
+                <option value="Operations">Internal Operations Team</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Main Goal</label>
+              <select data-fun-outcome>
+                <option value="Increase Sales">Increase Sales</option>
+                <option value="Reduce Manual Work">Reduce Manual Work</option>
+                <option value="Improve Customer Support">Improve Customer Support</option>
+                <option value="Launch a New Offer">Launch a New Offer</option>
+                <option value="Improve Retention">Improve Retention</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Budget Range</label>
+              <select data-fun-budget>
+                <option value="starter">Starter Budget</option>
+                <option value="growth">Growth Budget</option>
+                <option value="scale">Scale Budget</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Launch Timeline</label>
+              <select data-fun-timeline>
+                <option value="7">7 Days</option>
+                <option value="14">14 Days</option>
+                <option value="30">30 Days</option>
+                <option value="60">60 Days</option>
+              </select>
+            </div>
+          </div>
           <div class="inline-actions">
             <button class="btn" type="button" data-fun-roll-idea>Roll Idea</button>
           </div>
-          <p class="muted" data-fun-idea-result>Roll to generate an idea prompt.</p>
+          <article class="card idea-answer">
+            <p class="eyebrow">Adventure Plan</p>
+            <div class="idea-output" data-fun-idea-result>Roll to generate your custom offer path.</div>
+            <div class="inline-actions">
+              <a class="btn btn-ghost" href="/custom-tool.html">Start This Build</a>
+              <a class="btn btn-ghost" href="/products.html">Browse Product Options</a>
+            </div>
+          </article>
         </article>
         <article class="card">
           <h3>Pricing Trick</h3>
-          <p class="muted">Generate a conversion-style pricing structure to test on your next launch.</p>
+          <p class="muted">Generate a practical pricing ladder with test offers, urgency hooks, and support scope.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label>Monthly Customer Volume</label>
+              <select data-fun-pricing-volume>
+                <option value="low">Up to 50</option>
+                <option value="mid">50-250</option>
+                <option value="high">250+</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Support Intensity</label>
+              <select data-fun-pricing-support>
+                <option value="light">Light Support</option>
+                <option value="standard">Standard Support</option>
+                <option value="priority">Priority Support</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Risk Preference</label>
+              <select data-fun-pricing-risk>
+                <option value="safe">Low Risk</option>
+                <option value="balanced">Balanced</option>
+                <option value="aggressive">Aggressive Growth</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Target Offer Type</label>
+              <select data-fun-pricing-offer>
+                <option value="program">Software Program</option>
+                <option value="bot">Bot / Automation</option>
+                <option value="managed">Managed Service</option>
+              </select>
+            </div>
+          </div>
           <div class="inline-actions">
             <button class="btn" type="button" data-fun-roll-pricing>Roll Pricing Trick</button>
           </div>
-          <p class="muted" data-fun-pricing-result>Roll to generate a pricing pattern.</p>
+          <article class="card idea-answer">
+            <p class="eyebrow">Pricing Blueprint</p>
+            <div class="idea-output" data-fun-pricing-result>Roll to generate a pricing blueprint.</div>
+            <div class="inline-actions">
+              <a class="btn btn-ghost" href="/custom-tool.html">Request a Custom Quote</a>
+              <a class="btn btn-ghost" href="/support.html">Talk to Support</a>
+            </div>
+          </article>
         </article>
       </div>
     </section>

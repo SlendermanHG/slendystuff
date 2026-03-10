@@ -45,188 +45,306 @@
 
       <section class="admin-content hidden" data-admin-content>
         <article class="card">
-          <h2>Admin Security</h2>
-          <p class="muted">Rotate your admin password here without editing server files.</p>
-          <form data-admin-password-form>
+          <h2>Admin Control Center</h2>
+          <p class="muted">Dashboard and inbox are live data. Site settings are saved to backend config.</p>
+          <div class="inline-actions admin-tabs" data-admin-tabs>
+            <button class="btn btn-ghost" type="button" data-admin-tab="dashboard">Dashboard</button>
+            <button class="btn btn-ghost" type="button" data-admin-tab="inbox">Request Inbox</button>
+            <button class="btn btn-ghost" type="button" data-admin-tab="settings">Site Settings</button>
+            <button class="btn btn-ghost" type="button" data-admin-tab="security">Security</button>
+          </div>
+        </article>
+
+        <section data-admin-view="dashboard">
+          <article class="card">
+            <h2>Site Statistics</h2>
+            <p class="muted">Traffic and support stats from the backend logs and support queue.</p>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" type="button" data-admin-stats-refresh>Refresh Stats</button>
+            </div>
+            <p class="muted">Generated: <span data-stats-generated>--</span></p>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <p class="muted">Visitors (24h)</p>
+                <p class="stat-value" data-stat="visitors24h">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Visitors (7d)</p>
+                <p class="stat-value" data-stat="visitors7d">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Events (24h)</p>
+                <p class="stat-value" data-stat="events24h">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Events (7d)</p>
+                <p class="stat-value" data-stat="events7d">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Support Requests (24h)</p>
+                <p class="stat-value" data-stat="support24h">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Support Requests (7d)</p>
+                <p class="stat-value" data-stat="support7d">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Inbox Total</p>
+                <p class="stat-value" data-stat="queueTotal">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Inbox New</p>
+                <p class="stat-value" data-stat="queueNew">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Inbox In Progress</p>
+                <p class="stat-value" data-stat="queueInProgress">0</p>
+              </div>
+              <div class="stat-card">
+                <p class="muted">Inbox Closed</p>
+                <p class="stat-value" data-stat="queueClosed">0</p>
+              </div>
+            </div>
+            <p class="status" data-admin-stats-status></p>
+          </article>
+
+          <article class="card">
+            <h2>Top Activity</h2>
+            <div class="form-grid">
+              <div>
+                <h3>Top Events</h3>
+                <ul class="list compact-list" data-top-events></ul>
+              </div>
+              <div>
+                <h3>Top Products</h3>
+                <ul class="list compact-list" data-top-products></ul>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="hidden" data-admin-view="inbox">
+          <article class="card">
+            <h2>Support Request Inbox</h2>
+            <p class="muted">Review support requests, update status, and store internal notes.</p>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" type="button" data-admin-inbox-refresh>Refresh Inbox</button>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-table admin-inbox-table">
+                <thead>
+                  <tr>
+                    <th>Received</th>
+                    <th>Customer</th>
+                    <th>Issue</th>
+                    <th>Service Level</th>
+                    <th>Billing</th>
+                    <th>Status</th>
+                    <th>Admin Notes</th>
+                    <th>Save</th>
+                  </tr>
+                </thead>
+                <tbody data-support-requests-body></tbody>
+              </table>
+            </div>
+            <p class="status" data-admin-inbox-status></p>
+          </article>
+        </section>
+
+        <section class="hidden" data-admin-view="settings">
+          <article class="card">
+            <h2>Brand + Hero</h2>
             <div class="form-grid">
               <div class="field">
-                <label for="admin-current-password">Current Password</label>
-                <input id="admin-current-password" name="currentPassword" type="password" required>
+                <label>Brand Name</label>
+                <input name="brandName">
               </div>
               <div class="field">
-                <label for="admin-new-password">New Password</label>
-                <input id="admin-new-password" name="newPassword" type="password" minlength="10" required>
+                <label>Tagline</label>
+                <input name="brandTagline">
               </div>
             </div>
             <div class="field">
-              <label for="admin-confirm-password">Confirm New Password</label>
-              <input id="admin-confirm-password" name="confirmPassword" type="password" minlength="10" required>
+              <label>Hero Title</label>
+              <input name="heroTitle">
+            </div>
+            <div class="field">
+              <label>Hero Subtitle</label>
+              <textarea name="heroSubtitle"></textarea>
+            </div>
+            <div class="field">
+              <label>Accent Hex</label>
+              <input name="accentHex" placeholder="#ff2ea6">
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Stripe Links (Test links kept for now)</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label>Starter</label>
+                <input name="stripeStarter">
+              </div>
+              <div class="field">
+                <label>Pro</label>
+                <input name="stripePro">
+              </div>
+            </div>
+            <div class="field">
+              <label>Reset</label>
+              <input name="stripeReset">
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Support + AnyDesk</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label>Support Email</label>
+                <input name="supportEmail">
+              </div>
+              <div class="field">
+                <label>AnyDesk Source URL</label>
+                <input name="anydeskSourceUrl">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Refresh Interval (hours)</label>
+                <input name="refreshIntervalHours" type="number" min="1">
+              </div>
+              <div class="field">
+                <label>Tracking Enabled</label>
+                <label><input name="customTrackingEnabled" type="checkbox"> Enable custom tracking</label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Support Intro Text</label>
+              <textarea name="supportIntro"></textarea>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Idea Assistant Rules</h2>
+            <p class="muted">Hardwired rules are always applied to AI idea generation on the custom request page.</p>
+            <div class="field">
+              <label><input name="ideaAssistantEnabled" type="checkbox"> Enable AI idea assistant</label>
+            </div>
+            <div class="field">
+              <label>Hardwired Rules</label>
+              <textarea name="ideaHardwiredRules" placeholder="Rules that must always be enforced for idea generation."></textarea>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Logging + Tracking Keys</h2>
+            <div class="field">
+              <label>Proton Drive Log Path</label>
+              <input name="protonDriveLogPath">
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>GA Measurement ID</label>
+                <input name="gaMeasurementId" placeholder="G-XXXXXXXXXX">
+              </div>
+              <div class="field">
+                <label>Meta Pixel ID</label>
+                <input name="metaPixelId">
+              </div>
+            </div>
+            <div class="field">
+              <label>Webhook URL (optional)</label>
+              <input name="customWebhookUrl" placeholder="https://...">
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>API Keys</h2>
+            <div class="form-grid">
+              <div class="field">
+                <label>OpenAI</label>
+                <input name="apiKeyOpenai" type="password">
+              </div>
+              <div class="field">
+                <label>Discord</label>
+                <input name="apiKeyDiscord" type="password">
+              </div>
+            </div>
+            <div class="field">
+              <label>Stripe Secret</label>
+              <input name="apiKeyStripeSecret" type="password">
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Products</h2>
+            <p class="muted">Use one row per product/program/bot. IDs should stay unique.</p>
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>CTA Label</th>
+                    <th>CTA URL</th>
+                    <th>18+</th>
+                    <th>Remove</th>
+                    <th>Summary</th>
+                  </tr>
+                </thead>
+                <tbody data-products-body></tbody>
+              </table>
             </div>
             <div class="inline-actions">
-              <button class="btn btn-ghost" type="submit">Update Admin Password</button>
+              <button class="btn btn-ghost" type="button" data-add-product>Add Product Row</button>
             </div>
-            <p class="status" data-admin-password-status></p>
-          </form>
-        </article>
+          </article>
 
-        <article class="card">
-          <h2>Brand + Hero</h2>
-          <div class="form-grid">
-            <div class="field">
-              <label>Brand Name</label>
-              <input name="brandName">
+          <article class="card">
+            <div class="inline-actions">
+              <button class="btn" type="button" data-save-settings>Save All Settings</button>
+              <button class="btn btn-ghost" type="button" data-refresh-anydesk>Refresh AnyDesk Now</button>
             </div>
-            <div class="field">
-              <label>Tagline</label>
-              <input name="brandTagline">
-            </div>
-          </div>
-          <div class="field">
-            <label>Hero Title</label>
-            <input name="heroTitle">
-          </div>
-          <div class="field">
-            <label>Hero Subtitle</label>
-            <textarea name="heroSubtitle"></textarea>
-          </div>
-          <div class="field">
-            <label>Accent Hex</label>
-            <input name="accentHex" placeholder="#ff2ea6">
-          </div>
-        </article>
+            <p class="status" data-save-status></p>
+          </article>
+        </section>
 
-        <article class="card">
-          <h2>Stripe Links (Test links kept for now)</h2>
-          <div class="form-grid">
-            <div class="field">
-              <label>Starter</label>
-              <input name="stripeStarter">
-            </div>
-            <div class="field">
-              <label>Pro</label>
-              <input name="stripePro">
-            </div>
-          </div>
-          <div class="field">
-            <label>Reset</label>
-            <input name="stripeReset">
-          </div>
-        </article>
+        <section class="hidden" data-admin-view="security">
+          <article class="card">
+            <h2>Admin Security</h2>
+            <p class="muted">Rotate your admin password here without editing server files.</p>
+            <form data-admin-password-form>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="admin-current-password">Current Password</label>
+                  <input id="admin-current-password" name="currentPassword" type="password" required>
+                </div>
+                <div class="field">
+                  <label for="admin-new-password">New Password</label>
+                  <input id="admin-new-password" name="newPassword" type="password" minlength="10" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="admin-confirm-password">Confirm New Password</label>
+                <input id="admin-confirm-password" name="confirmPassword" type="password" minlength="10" required>
+              </div>
+              <div class="inline-actions">
+                <button class="btn btn-ghost" type="submit">Update Admin Password</button>
+              </div>
+              <p class="status" data-admin-password-status></p>
+            </form>
+          </article>
 
-        <article class="card">
-          <h2>Support + AnyDesk</h2>
-          <div class="form-grid">
-            <div class="field">
-              <label>Support Email</label>
-              <input name="supportEmail">
+          <article class="card">
+            <h2>Session</h2>
+            <p class="muted">Use logout to close the current admin session.</p>
+            <div class="inline-actions">
+              <button class="btn btn-ghost" type="button" data-logout>Logout</button>
             </div>
-            <div class="field">
-              <label>AnyDesk Source URL</label>
-              <input name="anydeskSourceUrl">
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>Refresh Interval (hours)</label>
-              <input name="refreshIntervalHours" type="number" min="1">
-            </div>
-            <div class="field">
-              <label>Tracking Enabled</label>
-              <label><input name="customTrackingEnabled" type="checkbox"> Enable custom tracking</label>
-            </div>
-          </div>
-          <div class="field">
-            <label>Support Intro Text</label>
-            <textarea name="supportIntro"></textarea>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Idea Assistant Rules</h2>
-          <p class="muted">Hardwired rules are always applied to AI idea generation on the custom request page.</p>
-          <div class="field">
-            <label><input name="ideaAssistantEnabled" type="checkbox"> Enable AI idea assistant</label>
-          </div>
-          <div class="field">
-            <label>Hardwired Rules</label>
-            <textarea name="ideaHardwiredRules" placeholder="Rules that must always be enforced for idea generation."></textarea>
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Logging + Tracking Keys</h2>
-          <div class="field">
-            <label>Proton Drive Log Path</label>
-            <input name="protonDriveLogPath">
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label>GA Measurement ID</label>
-              <input name="gaMeasurementId" placeholder="G-XXXXXXXXXX">
-            </div>
-            <div class="field">
-              <label>Meta Pixel ID</label>
-              <input name="metaPixelId">
-            </div>
-          </div>
-          <div class="field">
-            <label>Webhook URL (optional)</label>
-            <input name="customWebhookUrl" placeholder="https://...">
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>API Keys</h2>
-          <div class="form-grid">
-            <div class="field">
-              <label>OpenAI</label>
-              <input name="apiKeyOpenai" type="password">
-            </div>
-            <div class="field">
-              <label>Discord</label>
-              <input name="apiKeyDiscord" type="password">
-            </div>
-          </div>
-          <div class="field">
-            <label>Stripe Secret</label>
-            <input name="apiKeyStripeSecret" type="password">
-          </div>
-        </article>
-
-        <article class="card">
-          <h2>Products</h2>
-          <p class="muted">Use one row per product/program/bot. IDs should stay unique.</p>
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Title</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>CTA Label</th>
-                  <th>CTA URL</th>
-                  <th>18+</th>
-                  <th>Remove</th>
-                  <th>Summary</th>
-                </tr>
-              </thead>
-              <tbody data-products-body></tbody>
-            </table>
-          </div>
-          <div class="inline-actions">
-            <button class="btn btn-ghost" type="button" data-add-product>Add Product Row</button>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="inline-actions">
-            <button class="btn" type="button" data-save-settings>Save All Settings</button>
-            <button class="btn btn-ghost" type="button" data-refresh-anydesk>Refresh AnyDesk Now</button>
-            <button class="btn btn-ghost" type="button" data-logout>Logout</button>
-          </div>
-          <p class="status" data-save-status></p>
-        </article>
+          </article>
+        </section>
       </section>
     </section>
   </main>

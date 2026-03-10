@@ -15,6 +15,7 @@ const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 const SECRETS_PATH = path.join(DATA_DIR, "secrets.json");
 const ACCOUNTS_PATH = path.join(DATA_DIR, "accounts.json");
 const ADMINS_PATH = path.join(DATA_DIR, "admins.json");
+const SUPPORT_REQUESTS_PATH = path.join(DATA_DIR, "support-requests.json");
 
 const SESSION_COOKIE = "slendy_admin_session";
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
@@ -32,6 +33,7 @@ let settingsCache = null;
 let secretsCache = null;
 let accountsCache = null;
 let adminsCache = null;
+let supportRequestsCache = [];
 let writeQueue = Promise.resolve();
 let anydeskRefreshTimer = null;
 
@@ -142,12 +144,20 @@ const defaultAdmins = {
   admins: []
 };
 
+const defaultSupportRequests = [];
+
 function nowIso() {
   return new Date().toISOString();
 }
 
 function dayStamp() {
   return nowIso().slice(0, 10);
+}
+
+function dayStampOffset(offsetDays) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - offsetDays);
+  return date.toISOString().slice(0, 10);
 }
 
 function safeParseJson(value, fallback) {
@@ -307,6 +317,49 @@ function normalizeAdmins(payload) {
   };
 }
 
+function normalizeSupportRequestStatus(value) {
+  const normalized = safeString(value, "").toLowerCase();
+  if (normalized === "in_progress") {
+    return "in_progress";
+  }
+  if (normalized === "closed") {
+    return "closed";
+  }
+  return "new";
+}
+
+function normalizeSupportRequest(item) {
+  return {
+    id: safeString(item.id, crypto.randomUUID()).slice(0, 64),
+    name: safeString(item.name, "Anonymous").trim(),
+    email: safeString(item.email, "").trim(),
+    issue: safeString(item.issue, ""),
+    preferredTime: safeString(item.preferredTime, ""),
+    serviceLevel: safeString(item.serviceLevel, ""),
+    managementOptions: Array.isArray(item.managementOptions) ? item.managementOptions.map((value) => safeString(value, "")).filter(Boolean) : [],
+    billingStatus: safeString(item.billingStatus, "paid_support_required"),
+    billingReason: safeString(item.billingReason, ""),
+    freeSupportUntil: safeString(item.freeSupportUntil, ""),
+    accountUserId: safeString(item.accountUserId, ""),
+    clientTimezone: safeString(item.clientTimezone, ""),
+    status: normalizeSupportRequestStatus(item.status),
+    adminNotes: safeString(item.adminNotes, ""),
+    createdAt: safeString(item.createdAt, nowIso()),
+    updatedAt: safeString(item.updatedAt, safeString(item.createdAt, nowIso()))
+  };
+}
+
+function normalizeSupportRequests(payload) {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .filter((item) => item && typeof item === "object")
+    .map((item) => normalizeSupportRequest(item))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
 async function initData() {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.mkdir(LOG_DIR_FALLBACK, { recursive: true });
@@ -315,6 +368,7 @@ async function initData() {
   secretsCache = normalizeSecrets(await readJson(SECRETS_PATH, defaultSecrets));
   accountsCache = normalizeAccounts(await readJson(ACCOUNTS_PATH, defaultAccounts));
   adminsCache = normalizeAdmins(await readJson(ADMINS_PATH, defaultAdmins));
+  supportRequestsCache = normalizeSupportRequests(await readJson(SUPPORT_REQUESTS_PATH, defaultSupportRequests));
   await ensureBootstrapAdmin();
 }
 
@@ -366,6 +420,113 @@ async function appendLog(logName, payload, req = null) {
       // No-op: logging should not fail because webhook is unavailable.
     });
   }
+}
+
+async function readJsonLines(filePath) {
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    return raw
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .map((line) => safeParseJson(line, null))
+      .filter((item) => item && typeof item === "object");
+  } catch {
+    return [];
+  }
+}
+
+async function readRecentLogEntries(logName, days = 7) {
+  const logDir = resolveLogDir();
+  const entries = [];
+  for (let offset = 0; offset < days; offset += 1) {
+    const stamp = dayStampOffset(offset);
+    const filePath = path.join(logDir, `${logName}-${stamp}.jsonl`);
+    const fileEntries = await readJsonLines(filePath);
+    entries.push(...fileEntries);
+  }
+
+  return entries;
+}
+
+function entryTimestampMs(entry) {
+  const parsed = Date.parse(safeString(entry.timestamp, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function countEntriesSince(entries, sinceMs) {
+  return entries.reduce((count, entry) => (entryTimestampMs(entry) >= sinceMs ? count + 1 : count), 0);
+}
+
+function uniqueVisitorsSince(entries, sinceMs) {
+  const ips = new Set();
+  for (const entry of entries) {
+    if (entryTimestampMs(entry) < sinceMs) {
+      continue;
+    }
+    const ip = safeString(entry.ip, "");
+    if (ip) {
+      ips.add(ip);
+    }
+  }
+  return ips.size;
+}
+
+function topCounts(values, topN = 6) {
+  const counts = new Map();
+  for (const value of values) {
+    const label = safeString(value, "").trim();
+    if (!label) {
+      continue;
+    }
+    counts.set(label, (counts.get(label) || 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, topN)
+    .map(([label, count]) => ({ label, count }));
+}
+
+async function buildAdminStats() {
+  const analyticsEntries = await readRecentLogEntries("analytics", 7);
+  const supportEntries = await readRecentLogEntries("support-request", 7);
+  const ageEntries = await readRecentLogEntries("age-verification", 7);
+  const now = Date.now();
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const since24h = now - oneDayMs;
+  const since7d = now - oneDayMs * 7;
+
+  const topEvents = topCounts(analyticsEntries.map((entry) => entry.eventName), 6);
+  const topProducts = topCounts(
+    analyticsEntries
+      .map((entry) => (entry.meta && typeof entry.meta === "object" ? entry.meta.productId : ""))
+      .filter(Boolean),
+    6
+  );
+
+  return {
+    generatedAt: nowIso(),
+    traffic: {
+      visitors24h: uniqueVisitorsSince(analyticsEntries, since24h),
+      visitors7d: uniqueVisitorsSince(analyticsEntries, since7d),
+      events24h: countEntriesSince(analyticsEntries, since24h),
+      events7d: countEntriesSince(analyticsEntries, since7d)
+    },
+    support: {
+      requests24h: countEntriesSince(supportEntries, since24h),
+      requests7d: countEntriesSince(supportEntries, since7d),
+      queueTotal: supportRequestsCache.length,
+      queueNew: supportRequestsCache.filter((item) => item.status === "new").length,
+      queueInProgress: supportRequestsCache.filter((item) => item.status === "in_progress").length,
+      queueClosed: supportRequestsCache.filter((item) => item.status === "closed").length
+    },
+    ageGate: {
+      approvals7d: ageEntries.filter((entry) => entry.allowed === true).length,
+      denied7d: ageEntries.filter((entry) => entry.allowed === false).length
+    },
+    topEvents,
+    topProducts
+  };
 }
 
 function safeString(value, fallback = "") {
@@ -468,6 +629,26 @@ function sanitizeAdmin(admin) {
     role: admin.role,
     createdAt: admin.createdAt,
     lastLoginAt: admin.lastLoginAt
+  };
+}
+
+function sanitizeSupportRequestForAdmin(item) {
+  return {
+    id: item.id,
+    name: item.name,
+    email: item.email,
+    issue: item.issue,
+    preferredTime: item.preferredTime,
+    serviceLevel: item.serviceLevel,
+    managementOptions: [...item.managementOptions],
+    billingStatus: item.billingStatus,
+    billingReason: item.billingReason,
+    freeSupportUntil: item.freeSupportUntil,
+    accountUserId: item.accountUserId,
+    status: item.status,
+    adminNotes: item.adminNotes,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
   };
 }
 
@@ -1096,6 +1277,15 @@ app.post("/api/support/request", async (req, res) => {
       accountUserId: linkedUser ? linkedUser.id : null,
       clientTimezone: safeString(req.body.clientTimezone, "")
     };
+    const createdAt = nowIso();
+    const supportRequestRecord = normalizeSupportRequest({
+      id: crypto.randomUUID(),
+      ...requestDetails,
+      status: "new",
+      adminNotes: "",
+      createdAt,
+      updatedAt: createdAt
+    });
 
     if (linkedUser) {
       linkedUser.supportRequests.push({
@@ -1110,6 +1300,10 @@ app.post("/api/support/request", async (req, res) => {
       });
       await saveJson(ACCOUNTS_PATH, accountsCache);
     }
+
+    supportRequestsCache.unshift(supportRequestRecord);
+    supportRequestsCache = normalizeSupportRequests(supportRequestsCache);
+    await saveJson(SUPPORT_REQUESTS_PATH, supportRequestsCache);
 
     await appendLog("support-request", requestDetails, req);
 
@@ -1217,6 +1411,77 @@ app.post("/api/admin/logout", (req, res) => {
 
 app.get("/api/admin/session", requireAdmin, (req, res) => {
   res.json({ ok: true, admin: sanitizeAdmin(req.admin) });
+});
+
+app.get("/api/admin/stats", requireAdmin, async (_req, res) => {
+  try {
+    const stats = await buildAdminStats();
+    return res.json({ ok: true, stats });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Failed to build stats") });
+  }
+});
+
+app.get("/api/admin/support-requests", requireAdmin, (_req, res) => {
+  const requests = [...supportRequestsCache]
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((item) => {
+      const linkedUser = item.accountUserId ? findUserById(item.accountUserId) : null;
+      return {
+        ...sanitizeSupportRequestForAdmin(item),
+        accountEmail: linkedUser ? linkedUser.email : ""
+      };
+    });
+
+  res.json({ ok: true, requests });
+});
+
+app.patch("/api/admin/support-requests/:id", requireAdmin, async (req, res) => {
+  try {
+    const requestId = safeString(req.params.id, "").trim();
+    if (!requestId) {
+      return res.status(400).json({ ok: false, error: "Support request id is required." });
+    }
+
+    const index = supportRequestsCache.findIndex((item) => item.id === requestId);
+    if (index < 0) {
+      return res.status(404).json({ ok: false, error: "Support request not found." });
+    }
+
+    const existing = supportRequestsCache[index];
+    const nextStatus = req.body && Object.prototype.hasOwnProperty.call(req.body, "status")
+      ? normalizeSupportRequestStatus(req.body.status)
+      : existing.status;
+    const nextNotes = req.body && Object.prototype.hasOwnProperty.call(req.body, "adminNotes")
+      ? safeString(req.body.adminNotes, "")
+      : existing.adminNotes;
+    const updated = normalizeSupportRequest({
+      ...existing,
+      status: nextStatus,
+      adminNotes: nextNotes,
+      updatedAt: nowIso()
+    });
+
+    supportRequestsCache[index] = updated;
+    supportRequestsCache = normalizeSupportRequests(supportRequestsCache);
+    await saveJson(SUPPORT_REQUESTS_PATH, supportRequestsCache);
+
+    await appendLog(
+      "admin-support-request-update",
+      {
+        requestId: updated.id,
+        status: updated.status,
+        adminNotesLength: updated.adminNotes.length,
+        updatedByAdminId: req.admin.id,
+        updatedByAdminEmail: req.admin.email
+      },
+      req
+    );
+
+    return res.json({ ok: true, request: sanitizeSupportRequestForAdmin(updated) });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Failed to update support request") });
+  }
 });
 
 app.post("/api/admin/change-password", requireAdmin, async (req, res) => {

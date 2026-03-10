@@ -696,6 +696,58 @@ h3 {
   gap: 1rem;
 }
 
+[data-admin-view] {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-tabs .btn.active {
+  color: #0d0012;
+  border-color: transparent;
+  background: linear-gradient(120deg, var(--accent-yellow), var(--accent-cyan));
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+}
+
+.stat-card {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.7rem 0.75rem;
+}
+
+.stat-value {
+  margin: 0.35rem 0 0;
+  font-size: 1.28rem;
+  font-weight: 900;
+}
+
+.admin-inbox-table {
+  min-width: 1300px;
+}
+
+.admin-inbox-table td textarea {
+  min-height: 90px;
+}
+
+.admin-inbox-table td select {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(12, 7, 24, 0.93);
+  color: var(--ink);
+  padding: 0.58rem 0.68rem;
+}
+
+.fun-zone-grid .idea-answer {
+  margin-top: 0.9rem;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -858,6 +910,10 @@ h3 {
   .lane-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 780px) {
@@ -945,6 +1001,10 @@ h3 {
   .product-actions > *,
   .inline-actions > * {
     flex-basis: 100%;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 
