@@ -1013,6 +1013,12 @@ async function generateIdeaAssistantReply({ prompt, history, rules }) {
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 
+// Force secure subresource loading to prevent mixed-content warnings.
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "upgrade-insecure-requests; block-all-mixed-content");
+  next();
+});
+
 app.get("/api/public-config", (_req, res) => {
   res.json({ ok: true, config: getPublicConfig() });
 });
