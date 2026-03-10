@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Checkout | slendystuff</title>
-  <meta name="description" content="Secure checkout for slendystuff products with coupon support.">
+  <meta name="description" content="Secure itemized cart checkout for slendystuff products using Stripe Checkout.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://slendystuff.com/checkout.html">
   <link rel="stylesheet" href="/styles.css">
@@ -32,36 +32,52 @@
     <section class="section shell">
       <div class="section-head">
         <p class="eyebrow">Checkout</p>
-        <h1 data-checkout-title>Prepare your checkout.</h1>
-        <p class="muted">Apply coupon code <strong>SLENDERFAM</strong> to reduce checkout total to $0.00.</p>
+        <h1>Itemized cart checkout.</h1>
+        <p class="muted">Every purchase goes through cart totals with an itemized Stripe Checkout session.</p>
       </div>
+      <p class="status" data-checkout-status></p>
+    </section>
 
+    <section class="section shell">
       <div class="grid two">
         <article class="card">
-          <h2>Order Summary</h2>
-          <p class="muted"><strong>Product:</strong> <span data-checkout-product>Loading...</span></p>
-          <p class="muted"><strong>Base price:</strong> $<span data-checkout-base>0.00</span></p>
-          <p class="muted"><strong>Discount:</strong> -$<span data-checkout-discount>0.00</span></p>
-          <p><strong>Total due now:</strong> $<span data-checkout-total>0.00</span></p>
-          <p class="status" data-checkout-status></p>
+          <h2>Cart Summary</h2>
+          <div data-checkout-items></div>
         </article>
 
         <article class="card note-card">
-          <h2>Coupon</h2>
+          <h2>Totals</h2>
+          <p class="muted"><strong>Subtotal:</strong> $<span data-checkout-subtotal>0.00</span></p>
+          <p class="muted"><strong>Discount:</strong> -$<span data-checkout-discount>0.00</span></p>
+          <p><strong>Total due now:</strong> $<span data-checkout-total>0.00</span></p>
+
+          <hr>
+
           <div class="field">
             <label for="couponCode">Coupon code</label>
             <input id="couponCode" data-coupon-input placeholder="Enter code">
           </div>
           <div class="inline-actions">
-            <button class="btn" type="button" data-apply-coupon>Apply Coupon</button>
+            <button class="btn btn-ghost" type="button" data-apply-coupon>Apply Coupon</button>
             <button class="btn btn-ghost" type="button" data-remove-coupon>Remove Coupon</button>
           </div>
 
           <hr>
+
+          <h3>Discord Bot Remodel Upgrade</h3>
+          <p class="muted">If upgrading a previous bot built by Slendy, enter your owner-issued remodel code for a discount.</p>
+          <div class="field">
+            <label for="upgradeCode">Upgrade authorization code</label>
+            <input id="upgradeCode" data-upgrade-code placeholder="Code issued by Slendy">
+          </div>
+          <p class="muted" data-upgrade-note></p>
+
+          <hr>
+
           <div class="inline-actions">
-            <a class="btn" href="#" data-pay-link target="_blank" rel="noopener">Continue To Checkout</a>
+            <button class="btn" type="button" data-start-checkout>Pay With Stripe</button>
             <button class="btn hidden" type="button" data-free-checkout>Complete $0 Checkout</button>
-            <a class="btn btn-ghost" href="/catalog.html">Back To Catalog</a>
+            <a class="btn btn-ghost" href="/cart.html">Back To Cart</a>
           </div>
         </article>
       </div>
@@ -70,7 +86,7 @@
 
   <footer class="footer">
     <div class="shell">
-      <p class="muted">&copy; 2026 <span data-brand-name>slendystuff</span>. Checkout powered by your live pricing settings.</p>
+      <p class="muted">&copy; 2026 <span data-brand-name>slendystuff</span>. Stripe checkout is generated from your cart line items.</p>
     </div>
   </footer>
 

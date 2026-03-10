@@ -34,6 +34,7 @@
       "category": "Programs",
       "summary": "Speed up checkout and daily operations with a cleaner point-of-sale experience.",
       "priceLabel": "$29/mo launch price",
+      "priceCents": 2900,
       "ctaLabel": "Start POS Build",
       "ctaUrl": "/support.html?plan=pos-suite",
       "requires18Plus": false
@@ -44,6 +45,7 @@
       "category": "Programs",
       "summary": "Improve speed and stability on your Windows system with focused optimization tools.",
       "priceLabel": "$49 one-time reset",
+      "priceCents": 4900,
       "ctaLabel": "Book Optimizer",
       "ctaUrl": "/support.html?plan=system-optimizer",
       "requires18Plus": false
@@ -52,8 +54,9 @@
       "id": "discord-bot-kit",
       "title": "Discord Bot Kit",
       "category": "Bots",
-      "summary": "Automate moderation, alerts, and routine tasks so your community runs smoothly.",
-      "priceLabel": "$7/mo starter",
+      "summary": "One-time Discord bot build with optional remodel discount for prior Slendy builds.",
+      "priceLabel": "$99 one-time build",
+      "priceCents": 9900,
       "ctaLabel": "Launch Bot Kit",
       "ctaUrl": "/support.html?plan=discord-bot-kit",
       "requires18Plus": false
@@ -64,6 +67,7 @@
       "category": "Bots",
       "summary": "Managed remote automation for approved use cases with defined safeguards.",
       "priceLabel": "$59/mo managed",
+      "priceCents": 5900,
       "ctaLabel": "Apply for Access",
       "ctaUrl": "/support.html?plan=remote-control-limited",
       "requires18Plus": true

@@ -60,7 +60,9 @@
     customWebhookUrl: document.querySelector("[name='customWebhookUrl']"),
     apiKeyOpenai: document.querySelector("[name='apiKeyOpenai']"),
     apiKeyDiscord: document.querySelector("[name='apiKeyDiscord']"),
-    apiKeyStripeSecret: document.querySelector("[name='apiKeyStripeSecret']")
+    apiKeyStripeSecret: document.querySelector("[name='apiKeyStripeSecret']"),
+    discordRemodelCode: document.querySelector("[name='discordRemodelCode']"),
+    discordRemodelDiscountPercent: document.querySelector("[name='discordRemodelDiscountPercent']")
   };
 
   let currentSettings = null;
@@ -570,6 +572,8 @@
     formRefs.apiKeyOpenai.value = (secrets.apiKeys && secrets.apiKeys.openai) || "";
     formRefs.apiKeyDiscord.value = (secrets.apiKeys && secrets.apiKeys.discord) || "";
     formRefs.apiKeyStripeSecret.value = (secrets.apiKeys && secrets.apiKeys.stripeSecret) || "";
+    formRefs.discordRemodelCode.value = secrets.discordRemodelCode || "";
+    formRefs.discordRemodelDiscountPercent.value = String(secrets.discordRemodelDiscountPercent || 40);
 
     renderProductRows(settings.products || []);
   }
@@ -593,6 +597,7 @@
       <td><input data-key="title" value="${escapeHtml(product.title || "")}" placeholder="title"></td>
       <td><input data-key="category" value="${escapeHtml(product.category || "Programs")}" placeholder="category"></td>
       <td><input data-key="priceLabel" value="${escapeHtml(product.priceLabel || "")}" placeholder="price"></td>
+      <td><input data-key="priceCents" value="${escapeHtml(String(product.priceCents || ""))}" type="number" min="0" step="1" placeholder="9900"></td>
       <td><input data-key="ctaLabel" value="${escapeHtml(product.ctaLabel || "Learn More")}" placeholder="CTA"></td>
       <td><input data-key="ctaUrl" value="${escapeHtml(product.ctaUrl || "#")}" placeholder="URL"></td>
       <td><label><input type="checkbox" data-key="requires18Plus" ${product.requires18Plus ? "checked" : ""}>18+</label></td>
@@ -652,6 +657,8 @@
       gaMeasurementId: formRefs.gaMeasurementId.value,
       metaPixelId: formRefs.metaPixelId.value,
       customWebhookUrl: formRefs.customWebhookUrl.value,
+      discordRemodelCode: formRefs.discordRemodelCode.value,
+      discordRemodelDiscountPercent: Number(formRefs.discordRemodelDiscountPercent.value || 40),
       apiKeys: {
         openai: formRefs.apiKeyOpenai.value,
         discord: formRefs.apiKeyDiscord.value,
@@ -716,6 +723,7 @@
           category: get("category"),
           summary: get("summary"),
           priceLabel: get("priceLabel"),
+          priceCents: Number(get("priceCents") || 0),
           ctaLabel: get("ctaLabel"),
           ctaUrl: get("ctaUrl"),
           requires18Plus

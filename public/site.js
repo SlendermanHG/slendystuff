@@ -80,7 +80,7 @@
                 </div>
                 <div class="product-actions">
                   <a class="btn" href="${escapeHtml(app.getProductPageUrl(item.id))}" data-action="product_open" data-product-id="${escapeHtml(item.id)}">View Details</a>
-                  <a class="btn btn-ghost" href="${escapeHtml(item.ctaUrl || "#")}" target="_blank" rel="noopener" data-action="product_cta" data-product-id="${escapeHtml(item.id)}">${escapeHtml(item.ctaLabel || "Learn More")}</a>
+                  <a class="btn btn-ghost" href="${escapeHtml(normalizeNonStripeUrl(item.ctaUrl || "/support.html"))}" target="_blank" rel="noopener" data-action="product_cta" data-product-id="${escapeHtml(item.id)}">${escapeHtml(item.ctaLabel || "Learn More")}</a>
                 </div>
               </article>
             `;
@@ -444,6 +444,25 @@
   function normalizeLink(value) {
     const link = String(value || "").trim();
     return link || "#";
+  }
+
+  function normalizeNonStripeUrl(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+      return "/support.html";
+    }
+
+    try {
+      const parsed = new URL(raw, window.location.origin);
+      if (/stripe\.com$/i.test(parsed.hostname) || /\.stripe\.com$/i.test(parsed.hostname)) {
+        return "/checkout.html";
+      }
+      return parsed.href.startsWith(window.location.origin)
+        ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+        : parsed.href;
+    } catch {
+      return raw.startsWith("/") ? raw : "/support.html";
+    }
   }
 
   function roundToStep(value, step) {

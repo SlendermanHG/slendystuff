@@ -4,6 +4,7 @@
   const SESSION_STARTED_AT_KEY = "slendy_session_started_at";
   const SESSION_START_SENT_PREFIX = "slendy_session_start_sent_";
   const CART_STORAGE_KEY = "slendy_cart_items";
+  const FOOTER_COPY_SUFFIX = "Owner-built software for niche real-world problems.";
   const PRODUCT_PAGE_PATHS = {
     "pos-suite": "/products/pos-suite.html",
     "system-optimizer": "/products/system-optimizer.html",
@@ -110,26 +111,12 @@
       return `/checkout.html?id=${encodeURIComponent(key)}`;
     },
 
-    getCheckoutUrl(product, stripeLinks = {}) {
+    getCheckoutUrl(product) {
       const productId = String((product && product.id) || "").trim();
-      const map = {
-        "pos-suite": stripeLinks.starter,
-        "system-optimizer": stripeLinks.reset,
-        "discord-bot-kit": stripeLinks.pro,
-        "remote-control-limited": stripeLinks.pro
-      };
-
-      const preferred = String(map[productId] || "").trim();
-      if (preferred) {
-        return preferred;
+      if (!productId) {
+        return "/checkout.html";
       }
-
-      const ctaUrl = String((product && product.ctaUrl) || "").trim();
-      if (ctaUrl) {
-        return ctaUrl;
-      }
-
-      return "/support.html";
+      return this.getCheckoutPageUrl(productId);
     },
 
     getCart() {
@@ -327,7 +314,20 @@
       }
 
       this.config = payload.config;
+      this.applyFooterCopy(this.config && this.config.brand ? this.config.brand.name : "slendystuff");
       return this.config;
+    },
+
+    applyFooterCopy(brandName) {
+      const brand = String(brandName || "slendystuff").trim() || "slendystuff";
+      const year = new Date().getFullYear();
+      const line = `\u00A9 ${year} ${brand}. ${FOOTER_COPY_SUFFIX}`;
+      const nodes = Array.from(document.querySelectorAll(".footer p, .footer .muted"));
+      nodes
+        .filter((node) => String(node.textContent || "").includes("\u00A9"))
+        .forEach((node) => {
+          node.textContent = line;
+        });
     },
 
     async getAnydeskInfo() {

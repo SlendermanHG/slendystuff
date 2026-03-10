@@ -99,7 +99,7 @@
 
   function renderCard(product, config) {
     const productUrl = app.getProductPageUrl(product.id);
-    const checkoutUrl = app.getCheckoutPageUrl(product.id);
+    const checkoutUrl = "/checkout.html";
     return `
       <article class="card tilt-card">
         <p class="eyebrow">${escapeHtml(product.category || "Offer")}</p>
@@ -132,7 +132,8 @@
     document.querySelectorAll("[data-direct-checkout]").forEach((link) => {
       link.addEventListener("click", () => {
         const productId = link.getAttribute("data-direct-checkout");
-        app.track("catalog_direct_checkout", { productId, hasStripeLinks: Boolean(config.stripeLinks) });
+        app.addToCart(productId, 1);
+        app.track("catalog_direct_checkout", { productId, flow: "cart_to_stripe" });
       });
     });
   }

@@ -50,7 +50,6 @@
     const rows = cart
       .map((item) => {
         const product = products.find((p) => p.id === item.id) || { id: item.id, title: item.id, priceLabel: "See product page" };
-        const checkoutUrl = app.getCheckoutPageUrl(item.id);
         return `
           <tr>
             <td>${escapeHtml(product.title || item.id)}</td>
@@ -61,7 +60,6 @@
             <td>
               <div class="inline-actions">
                 <a class="btn btn-ghost" href="${escapeHtml(app.getProductPageUrl(item.id))}">View</a>
-                <a class="btn" href="${escapeHtml(checkoutUrl)}" data-cart-checkout="${escapeHtml(item.id)}">Checkout</a>
                 <button class="btn btn-ghost" type="button" data-remove-item="${escapeHtml(item.id)}">Remove</button>
               </div>
             </td>
@@ -85,6 +83,9 @@
             </thead>
             <tbody>${rows}</tbody>
           </table>
+        </div>
+        <div class="inline-actions">
+          <a class="btn" href="/checkout.html" data-cart-checkout="cart">Checkout Cart</a>
         </div>
       </article>
     `;

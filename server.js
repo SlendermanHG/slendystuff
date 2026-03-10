@@ -41,6 +41,7 @@ const LOGIN_RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 10 };
 const SUPPORT_RATE_LIMIT = { windowMs: 10 * 60 * 1000, max: 8 };
 const TRACK_RATE_LIMIT = { windowMs: 60 * 1000, max: 120 };
 const ACCOUNT_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 15 };
+const CHECKOUT_RATE_LIMIT = { windowMs: 60 * 1000, max: 30 };
 const PORT = Number(process.env.PORT || 4173);
 const RW_COV_BASE_URL = "https://rwcov.org";
 const RW_COV_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -95,6 +96,7 @@ const defaultSettings = {
       category: "Programs",
       summary: "Speed up checkout and daily operations with a cleaner point-of-sale experience.",
       priceLabel: "$29/mo launch price",
+      priceCents: 2900,
       ctaLabel: "Start POS Build",
       ctaUrl: "/support.html?plan=pos-suite",
       requires18Plus: false
@@ -105,6 +107,7 @@ const defaultSettings = {
       category: "Programs",
       summary: "Improve speed and stability on your Windows system with focused optimization tools.",
       priceLabel: "$49 one-time reset",
+      priceCents: 4900,
       ctaLabel: "Book Optimizer",
       ctaUrl: "/support.html?plan=system-optimizer",
       requires18Plus: false
@@ -114,7 +117,8 @@ const defaultSettings = {
       title: "Discord Bot Kit",
       category: "Bots",
       summary: "Automate moderation, alerts, and routine tasks so your community runs smoothly.",
-      priceLabel: "$7/mo starter",
+      priceLabel: "$99 one-time build",
+      priceCents: 9900,
       ctaLabel: "Launch Bot Kit",
       ctaUrl: "/support.html?plan=discord-bot-kit",
       requires18Plus: false
@@ -125,6 +129,7 @@ const defaultSettings = {
       category: "Bots",
       summary: "Managed remote automation for approved use cases with defined safeguards.",
       priceLabel: "$59/mo managed",
+      priceCents: 5900,
       ctaLabel: "Apply for Access",
       ctaUrl: "/support.html?plan=remote-control-limited",
       requires18Plus: true
@@ -138,6 +143,8 @@ const defaultSecrets = {
   gaMeasurementId: "",
   metaPixelId: "",
   customWebhookUrl: "",
+  discordRemodelCode: process.env.DISCORD_REMODEL_CODE || "",
+  discordRemodelDiscountPercent: Number(process.env.DISCORD_REMODEL_DISCOUNT_PERCENT || 40),
   apiKeys: {
     openai: "",
     discord: "",
@@ -202,6 +209,38 @@ async function saveJson(filePath, value) {
   });
 }
 
+function extractPriceCentsFromLabel(priceLabel) {
+  const match = String(priceLabel || "").match(/([0-9]+(?:\.[0-9]{1,2})?)/);
+  if (!match) {
+    return 0;
+  }
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return 0;
+  }
+  return Math.round(amount * 100);
+}
+
+function normalizePriceCents(rawValue, fallbackLabel = "", productId = "") {
+  const explicit = Number(rawValue);
+  if (Number.isFinite(explicit) && explicit > 0) {
+    return Math.min(50000000, Math.round(explicit));
+  }
+
+  const fromLabel = extractPriceCentsFromLabel(fallbackLabel);
+  if (fromLabel > 0) {
+    return fromLabel;
+  }
+
+  const fallbackById = {
+    "pos-suite": 2900,
+    "system-optimizer": 4900,
+    "discord-bot-kit": 9900,
+    "remote-control-limited": 5900
+  };
+  return fallbackById[String(productId || "").trim()] || 0;
+}
+
 function normalizeSettings(payload) {
   const merged = {
     ...defaultSettings,
@@ -233,16 +272,21 @@ function normalizeSettings(payload) {
 
   merged.products = merged.products
     .filter((item) => item && typeof item === "object")
-    .map((item, index) => ({
-      id: truncate(String(item.id || `item-${index + 1}`).trim().replace(/[^a-zA-Z0-9_-]/g, "-"), 80),
-      title: truncate(String(item.title || "Untitled").trim(), 120),
-      category: truncate(String(item.category || "Programs").trim(), 80),
-      summary: truncate(String(item.summary || "").trim(), 500),
-      priceLabel: truncate(String(item.priceLabel || "").trim(), 60),
-      ctaLabel: truncate(String(item.ctaLabel || "Learn More").trim(), 60),
-      ctaUrl: normalizeCtaUrl(item.ctaUrl || "#"),
-      requires18Plus: Boolean(item.requires18Plus)
-    }));
+    .map((item, index) => {
+      const id = truncate(String(item.id || `item-${index + 1}`).trim().replace(/[^a-zA-Z0-9_-]/g, "-"), 80);
+      const priceLabel = truncate(String(item.priceLabel || "").trim(), 60);
+      return {
+        id,
+        title: truncate(String(item.title || "Untitled").trim(), 120),
+        category: truncate(String(item.category || "Programs").trim(), 80),
+        summary: truncate(String(item.summary || "").trim(), 500),
+        priceLabel,
+        priceCents: normalizePriceCents(item.priceCents, priceLabel, id),
+        ctaLabel: truncate(String(item.ctaLabel || "Learn More").trim(), 60),
+        ctaUrl: normalizeCtaUrl(item.ctaUrl || "#"),
+        requires18Plus: Boolean(item.requires18Plus)
+      };
+    });
 
   return merged;
 }
@@ -262,6 +306,8 @@ function normalizeSecrets(payload) {
   merged.gaMeasurementId = truncate(String(merged.gaMeasurementId || "").trim(), 64);
   merged.metaPixelId = truncate(String(merged.metaPixelId || "").trim(), 64);
   merged.customWebhookUrl = normalizeHttpsUrl(merged.customWebhookUrl);
+  merged.discordRemodelCode = truncate(safeString(merged.discordRemodelCode, "").trim(), 120);
+  merged.discordRemodelDiscountPercent = Math.min(90, Math.max(0, Number(merged.discordRemodelDiscountPercent || 40)));
   merged.apiKeys.openai = truncate(safeString(merged.apiKeys.openai, "").trim(), 300);
   merged.apiKeys.discord = truncate(safeString(merged.apiKeys.discord, "").trim(), 300);
   merged.apiKeys.stripeSecret = truncate(safeString(merged.apiKeys.stripeSecret, "").trim(), 300);
@@ -1174,6 +1220,138 @@ function normalizeEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "";
 }
 
+function resolveRequestOrigin(req) {
+  const forwardedProto = safeString(req.headers["x-forwarded-proto"], "").split(",")[0].trim();
+  const forwardedHost = safeString(req.headers["x-forwarded-host"], "").split(",")[0].trim();
+  const protocol = forwardedProto || (req.secure ? "https" : "http") || "https";
+  const host = forwardedHost || safeString(req.get && req.get("host"), "").trim();
+  if (!host) {
+    return `${protocol}://localhost:${PORT}`;
+  }
+  return `${protocol}://${host}`;
+}
+
+function normalizeCartItemsInput(rawItems) {
+  if (!Array.isArray(rawItems)) {
+    return [];
+  }
+
+  return rawItems
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      id: truncate(String(item.id || "").trim(), 80),
+      qty: Math.max(1, Math.min(99, Number(item.qty || 1)))
+    }))
+    .filter((item) => item.id);
+}
+
+function buildCheckoutLineItems(cartItems) {
+  const productsById = new Map((settingsCache.products || []).map((product) => [product.id, product]));
+  const lineItems = [];
+
+  for (const item of normalizeCartItemsInput(cartItems)) {
+    const product = productsById.get(item.id);
+    if (!product) {
+      continue;
+    }
+
+    const unitAmount = normalizePriceCents(product.priceCents, product.priceLabel, product.id);
+    if (unitAmount <= 0) {
+      continue;
+    }
+
+    lineItems.push({
+      id: product.id,
+      title: truncate(safeString(product.title, product.id), 120),
+      qty: item.qty,
+      unitAmountCents: unitAmount
+    });
+  }
+
+  return lineItems;
+}
+
+function applyDiscordRemodelDiscount(lineItems, upgradeCode) {
+  const configuredCode = safeString(secretsCache.discordRemodelCode, "").trim();
+  const suppliedCode = safeString(upgradeCode, "").trim();
+  const discountPercent = Math.min(90, Math.max(0, Number(secretsCache.discordRemodelDiscountPercent || 40)));
+
+  if (!configuredCode || !suppliedCode || !timingSafeEqualString(suppliedCode, configuredCode)) {
+    return {
+      lineItems,
+      discountApplied: false,
+      discountPercent: 0
+    };
+  }
+
+  const discounted = lineItems.map((item) => {
+    if (item.id !== "discord-bot-kit") {
+      return item;
+    }
+    const nextAmount = Math.max(100, Math.round(item.unitAmountCents * (1 - discountPercent / 100)));
+    return {
+      ...item,
+      unitAmountCents: nextAmount
+    };
+  });
+
+  return {
+    lineItems: discounted,
+    discountApplied: discounted.some((item, index) => item.unitAmountCents !== lineItems[index].unitAmountCents),
+    discountPercent
+  };
+}
+
+async function createStripeCartCheckoutSession({ req, lineItems }) {
+  const stripeSecret = safeString((secretsCache.apiKeys && secretsCache.apiKeys.stripeSecret) || process.env.STRIPE_SECRET_KEY, "").trim();
+  if (!stripeSecret) {
+    throw new Error("Stripe secret key is not configured.");
+  }
+
+  if (!Array.isArray(lineItems) || lineItems.length === 0) {
+    throw new Error("Cart is empty.");
+  }
+
+  const origin = resolveRequestOrigin(req);
+  const successUrl = `${origin}/checkout.html?success=1`;
+  const cancelUrl = `${origin}/checkout.html?canceled=1`;
+  const body = new URLSearchParams();
+  body.set("mode", "payment");
+  body.set("success_url", successUrl);
+  body.set("cancel_url", cancelUrl);
+  body.set("allow_promotion_codes", "true");
+  body.set("billing_address_collection", "auto");
+  body.set("submit_type", "pay");
+
+  lineItems.forEach((item, index) => {
+    body.set(`line_items[${index}][quantity]`, String(item.qty));
+    body.set(`line_items[${index}][price_data][currency]`, "usd");
+    body.set(`line_items[${index}][price_data][unit_amount]`, String(item.unitAmountCents));
+    body.set(`line_items[${index}][price_data][product_data][name]`, item.title);
+    body.set(`line_items[${index}][price_data][product_data][metadata][product_id]`, item.id);
+  });
+
+  const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${stripeSecret}`,
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload || !payload.url) {
+    const message = safeString(payload && payload.error && payload.error.message, "Stripe checkout session failed.");
+    throw new Error(message);
+  }
+
+  return {
+    id: safeString(payload.id, ""),
+    url: safeString(payload.url, "")
+  };
+}
+
 function timingSafeEqualString(leftValue, rightValue) {
   const left = Buffer.from(String(leftValue || ""));
   const right = Buffer.from(String(rightValue || ""));
@@ -1470,6 +1648,9 @@ function getPublicConfig() {
       customTrackingEnabled: settingsCache.analytics.customTrackingEnabled !== false,
       gaMeasurementId: secretsCache.gaMeasurementId,
       metaPixelId: secretsCache.metaPixelId
+    },
+    offers: {
+      discordRemodelDiscountPercent: Math.min(90, Math.max(0, Number(secretsCache.discordRemodelDiscountPercent || 40)))
     },
     products: settingsCache.products
   };
@@ -1797,6 +1978,7 @@ const loginRateLimiter = createRateLimiter({ ...LOGIN_RATE_LIMIT, keyPrefix: "ad
 const supportRateLimiter = createRateLimiter({ ...SUPPORT_RATE_LIMIT, keyPrefix: "support-request" });
 const trackRateLimiter = createRateLimiter({ ...TRACK_RATE_LIMIT, keyPrefix: "track" });
 const accountRateLimiter = createRateLimiter({ ...ACCOUNT_RATE_LIMIT, keyPrefix: "account-auth" });
+const checkoutRateLimiter = createRateLimiter({ ...CHECKOUT_RATE_LIMIT, keyPrefix: "checkout" });
 
 app.use(applySecurityHeaders);
 app.use(cookieParser());
@@ -2018,6 +2200,68 @@ app.get("/api/account/session", (req, res) => {
 app.post("/api/account/logout", (req, res) => {
   clearAccountSession(req, res);
   return res.json({ ok: true });
+});
+
+app.post("/api/checkout/cart-session", checkoutRateLimiter, async (req, res) => {
+  try {
+    const cartItems = normalizeCartItemsInput(req.body && req.body.items);
+    const couponCode = truncate(safeString(req.body && req.body.couponCode, "").trim().toUpperCase(), 40);
+    const upgradeCode = truncate(safeString(req.body && req.body.upgradeCode, "").trim(), 120);
+    const initialLineItems = buildCheckoutLineItems(cartItems);
+    if (initialLineItems.length === 0) {
+      return res.status(400).json({ ok: false, error: "Cart is empty or contains invalid items." });
+    }
+    const remodeled = applyDiscordRemodelDiscount(initialLineItems, upgradeCode);
+    const lineItems = remodeled.lineItems;
+
+    const subtotalCents = lineItems.reduce((sum, item) => sum + item.unitAmountCents * item.qty, 0);
+    if (couponCode === "SLENDERFAM") {
+      await appendLog(
+        "checkout-free",
+        {
+          couponCode,
+          remodelDiscountApplied: remodeled.discountApplied,
+          remodelDiscountPercent: remodeled.discountApplied ? remodeled.discountPercent : 0,
+          lineItems: lineItems.map((item) => ({ id: item.id, qty: item.qty, unitAmountCents: item.unitAmountCents })),
+          subtotalCents
+        },
+        req
+      );
+
+      return res.json({
+        ok: true,
+        freeCheckout: true,
+        subtotalCents,
+        totalCents: 0
+      });
+    }
+
+    const session = await createStripeCartCheckoutSession({ req, lineItems });
+    await appendLog(
+      "checkout-session",
+      {
+        sessionId: session.id,
+        couponCode: couponCode || null,
+        remodelDiscountApplied: remodeled.discountApplied,
+        remodelDiscountPercent: remodeled.discountApplied ? remodeled.discountPercent : 0,
+        subtotalCents,
+        lineItems: lineItems.map((item) => ({ id: item.id, qty: item.qty, unitAmountCents: item.unitAmountCents }))
+      },
+      req
+    );
+
+    return res.json({
+      ok: true,
+      url: session.url,
+      sessionId: session.id,
+      subtotalCents,
+      totalCents: subtotalCents,
+      remodelDiscountApplied: remodeled.discountApplied,
+      remodelDiscountPercent: remodeled.discountApplied ? remodeled.discountPercent : 0
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Could not start Stripe checkout.") });
+  }
 });
 
 app.get("/api/forum/topics", (_req, res) => {

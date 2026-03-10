@@ -342,6 +342,21 @@
           </article>
 
           <article class="card">
+            <h2>Discord Remodel Offer</h2>
+            <p class="muted">Use an owner-issued code so only your previous clients can unlock remodel discount pricing.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label>Remodel Code</label>
+                <input name="discordRemodelCode" type="password" placeholder="Owner-issued code">
+              </div>
+              <div class="field">
+                <label>Remodel Discount Percent</label>
+                <input name="discordRemodelDiscountPercent" type="number" min="0" max="90" step="1" placeholder="40">
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
             <h2>Products</h2>
             <p class="muted">Use one row per product/program/bot. IDs should stay unique.</p>
             <div class="table-wrap">
@@ -352,6 +367,7 @@
                     <th>Title</th>
                     <th>Category</th>
                     <th>Price</th>
+                    <th>Price Cents</th>
                     <th>CTA Label</th>
                     <th>CTA URL</th>
                     <th>18+</th>
