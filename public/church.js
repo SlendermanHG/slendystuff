@@ -24,8 +24,6 @@
   };
 
   const status = document.querySelector("[data-rwc-status]");
-  const donateIframe = document.querySelector("[data-rwc-donate-iframe]");
-  const donateEmbedNote = document.querySelector("[data-rwc-embed-note]");
 
   try {
     const config = await app.fetchPublicConfig();
@@ -93,13 +91,6 @@
     setLink("[data-rwc-phone-link]", phoneHref);
     setLink("[data-rwc-email-link]", `mailto:${church.email || defaults.email}`);
 
-    if (donateIframe && church.links.zeffyEmbed) {
-      donateIframe.src = church.links.zeffyEmbed;
-    }
-
-    if (donateEmbedNote) {
-      donateEmbedNote.textContent = "If the embedded form does not load in your browser, use the secure Zeffy donation button.";
-    }
   }
 
   function buildZeffyDirectUrl(embedUrl, givingUrl) {
