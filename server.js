@@ -40,6 +40,10 @@ const ACCOUNT_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 15 };
 const PORT = Number(process.env.PORT || 4173);
 const RW_COV_BASE_URL = "https://rwcov.org";
 const RW_COV_CACHE_TTL_MS = 30 * 60 * 1000;
+const IP_GEO_CACHE_TTL_MS = Number(process.env.IP_GEO_CACHE_TTL_MS || 24 * 60 * 60 * 1000);
+const IP_GEO_ERROR_TTL_MS = Number(process.env.IP_GEO_ERROR_TTL_MS || 60 * 60 * 1000);
+const IP_GEO_LOOKUP_TIMEOUT_MS = Number(process.env.IP_GEO_LOOKUP_TIMEOUT_MS || 3500);
+const IP_GEO_LOOKUP_CONCURRENCY = Math.min(10, Math.max(1, Number(process.env.IP_GEO_LOOKUP_CONCURRENCY || 6)));
 
 let settingsCache = null;
 let secretsCache = null;
@@ -48,6 +52,8 @@ let accountsCache = [];
 let writeQueue = Promise.resolve();
 let anydeskRefreshTimer = null;
 let rwcovInfoCache = null;
+const ipGeoCache = new Map();
+const ipGeoInFlight = new Map();
 
 const defaultSettings = {
   brand: {
@@ -492,6 +498,181 @@ function extractClientIp(req) {
   return ips[0] || "unknown";
 }
 
+function isIpv4(value) {
+  const ip = safeString(value, "").trim();
+  const parts = ip.split(".");
+  if (parts.length !== 4) {
+    return false;
+  }
+
+  return parts.every((part) => /^\d+$/.test(part) && Number(part) >= 0 && Number(part) <= 255);
+}
+
+function privateIpLocationLabel(value) {
+  const ip = normalizeIpValue(value);
+  if (!ip || ip === "unknown") {
+    return "Unknown";
+  }
+
+  if (ip === "::1" || ip === "localhost") {
+    return "Localhost";
+  }
+
+  if (isIpv4(ip)) {
+    const [a, b] = ip.split(".").map((part) => Number(part));
+    if (a === 127) return "Localhost";
+    if (a === 10) return "Private Network";
+    if (a === 192 && b === 168) return "Private Network";
+    if (a === 172 && b >= 16 && b <= 31) return "Private Network";
+    if (a === 169 && b === 254) return "Link-Local";
+    if (a === 100 && b >= 64 && b <= 127) return "Carrier NAT";
+    if (a === 0 || a >= 224) return "Reserved";
+    return "";
+  }
+
+  const lower = ip.toLowerCase();
+  if (lower.startsWith("fc") || lower.startsWith("fd")) return "Private IPv6";
+  if (lower.startsWith("fe80")) return "Link-Local IPv6";
+  if (lower.startsWith("::ffff:127.")) return "Localhost";
+
+  return "";
+}
+
+function locationLabelFromLookup(payload) {
+  const parts = [
+    safeString(payload.city, "").trim(),
+    safeString(payload.region, "").trim(),
+    safeString(payload.country, "").trim()
+  ].filter(Boolean);
+
+  if (parts.length > 0) {
+    return parts.join(", ");
+  }
+
+  const continent = safeString(payload.continent, "").trim();
+  return continent || "Unknown";
+}
+
+async function fetchIpLocation(ip) {
+  const normalizedIp = normalizeIpValue(ip);
+  if (!normalizedIp) {
+    return { ip: "", label: "Unknown", source: "none", resolvedAt: nowIso() };
+  }
+
+  const privateLabel = privateIpLocationLabel(normalizedIp);
+  if (privateLabel) {
+    return { ip: normalizedIp, label: privateLabel, source: "local", resolvedAt: nowIso() };
+  }
+
+  const timeoutController = new AbortController();
+  const timeout = setTimeout(() => timeoutController.abort(), IP_GEO_LOOKUP_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(
+      `https://ipwho.is/${encodeURIComponent(normalizedIp)}?fields=success,message,city,region,country,continent`,
+      {
+        headers: { "User-Agent": "slendystuff-ip-locator/1.0" },
+        signal: timeoutController.signal
+      }
+    );
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok || payload.success === false) {
+      const fallbackLabel =
+        payload && typeof payload.message === "string" && payload.message.toLowerCase().includes("reserved")
+          ? "Reserved"
+          : "Unknown";
+      return { ip: normalizedIp, label: fallbackLabel, source: "ipwho.is", resolvedAt: nowIso() };
+    }
+
+    return {
+      ip: normalizedIp,
+      label: locationLabelFromLookup(payload),
+      source: "ipwho.is",
+      resolvedAt: nowIso()
+    };
+  } catch {
+    return { ip: normalizedIp, label: "Unknown", source: "error", resolvedAt: nowIso() };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function resolveIpLocation(ip) {
+  const normalizedIp = normalizeIpValue(ip);
+  if (!normalizedIp) {
+    return { ip: "", label: "Unknown", source: "none", resolvedAt: nowIso() };
+  }
+
+  const cached = ipGeoCache.get(normalizedIp);
+  const now = Date.now();
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const inFlight = ipGeoInFlight.get(normalizedIp);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const lookupPromise = fetchIpLocation(normalizedIp)
+    .then((result) => {
+      const ttlMs = result.source === "ipwho.is" || result.source === "local" ? IP_GEO_CACHE_TTL_MS : IP_GEO_ERROR_TTL_MS;
+      ipGeoCache.set(normalizedIp, { value: result, expiresAt: Date.now() + ttlMs });
+      return result;
+    })
+    .finally(() => {
+      ipGeoInFlight.delete(normalizedIp);
+    });
+
+  ipGeoInFlight.set(normalizedIp, lookupPromise);
+  return lookupPromise;
+}
+
+async function resolveIpLocations(ips) {
+  const uniqueIps = Array.from(
+    new Set(
+      (Array.isArray(ips) ? ips : [])
+        .map((value) => normalizeIpValue(value))
+        .filter(Boolean)
+    )
+  );
+
+  const locationByIp = {};
+  if (uniqueIps.length === 0) {
+    return locationByIp;
+  }
+
+  let index = 0;
+  const workers = new Array(Math.min(IP_GEO_LOOKUP_CONCURRENCY, uniqueIps.length)).fill(0).map(async () => {
+    while (index < uniqueIps.length) {
+      const currentIndex = index;
+      index += 1;
+      const currentIp = uniqueIps[currentIndex];
+      const location = await resolveIpLocation(currentIp);
+      locationByIp[currentIp] = location;
+    }
+  });
+
+  await Promise.all(workers);
+  return locationByIp;
+}
+
+function mapIpDetails(ips, locationByIp) {
+  const uniqueIps = Array.from(new Set((Array.isArray(ips) ? ips : []).map((value) => normalizeIpValue(value)).filter(Boolean)));
+  return uniqueIps.map((ip) => ({
+    ip,
+    location: (locationByIp[ip] && locationByIp[ip].label) || "Unknown"
+  }));
+}
+
+function summarizeIpLocations(ipDetails) {
+  const uniqueLocations = Array.from(
+    new Set((Array.isArray(ipDetails) ? ipDetails : []).map((item) => safeString(item.location, "").trim()).filter(Boolean))
+  );
+  return uniqueLocations.length > 0 ? uniqueLocations.join(" | ") : "-";
+}
+
 async function appendLog(logName, payload, req = null) {
   const logDir = resolveLogDir();
   const timestamp = nowIso();
@@ -771,16 +952,56 @@ async function buildAdminStats() {
       .filter(Boolean),
     6
   );
-  const topIps = topCounts(analyticsEntries.map((entry) => entry.ip), 10);
+  const topIpsRaw = topCounts(analyticsEntries.map((entry) => entry.ip), 10);
 
-  const sessions24h = sessions.filter((item) => item.lastSeenMs >= since24h);
-  const activeSessions15m = sessions.filter((item) => item.lastSeenMs >= since15m);
+  const ipLookupSet = new Set();
+  for (const item of topIpsRaw) {
+    if (item && item.label) {
+      ipLookupSet.add(item.label);
+    }
+  }
+  for (const session of sessions.slice(0, 180)) {
+    for (const ip of Array.isArray(session.ips) ? session.ips : []) {
+      ipLookupSet.add(ip);
+    }
+  }
+  const ipLocationByIp = await resolveIpLocations(Array.from(ipLookupSet).slice(0, 320));
+
+  const enrichedSessions = sessions.map((session) => {
+    const ipDetails = mapIpDetails(session.ips, ipLocationByIp);
+    return {
+      ...session,
+      ipDetails,
+      primaryIp: ipDetails[0] ? ipDetails[0].ip : "",
+      primaryLocation: ipDetails[0] ? ipDetails[0].location : "Unknown",
+      locationSummary: summarizeIpLocations(ipDetails)
+    };
+  });
+
+  const enrichedVisitors = visitors.map((visitor) => {
+    const ipDetails = mapIpDetails(visitor.ips, ipLocationByIp);
+    return {
+      ...visitor,
+      ipDetails,
+      primaryIp: ipDetails[0] ? ipDetails[0].ip : "",
+      primaryLocation: ipDetails[0] ? ipDetails[0].location : "Unknown",
+      locationSummary: summarizeIpLocations(ipDetails)
+    };
+  });
+
+  const topIps = topIpsRaw.map((item) => ({
+    ...item,
+    location: (ipLocationByIp[item.label] && ipLocationByIp[item.label].label) || "Unknown"
+  }));
+
+  const sessions24h = enrichedSessions.filter((item) => item.lastSeenMs >= since24h);
+  const activeSessions15m = enrichedSessions.filter((item) => item.lastSeenMs >= since15m);
   const avgSessionMinutes24h =
     sessions24h.length > 0
       ? Number((sessions24h.reduce((sum, item) => sum + safeNumber(item.durationMs, 0), 0) / sessions24h.length / 60000).toFixed(1))
       : 0;
   const totalConnectedHours7d = Number(
-    (sessions.reduce((sum, item) => sum + safeNumber(item.durationMs, 0), 0) / 3600000).toFixed(2)
+    (enrichedSessions.reduce((sum, item) => sum + safeNumber(item.durationMs, 0), 0) / 3600000).toFixed(2)
   );
 
   return {
@@ -815,8 +1036,8 @@ async function buildAdminStats() {
     topEvents,
     topProducts,
     topIps,
-    recentVisitors: visitors.slice(0, 120),
-    recentSessions: sessions.slice(0, 180)
+    recentVisitors: enrichedVisitors.slice(0, 120),
+    recentSessions: enrichedSessions.slice(0, 180)
   };
 }
 

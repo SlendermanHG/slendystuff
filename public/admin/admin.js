@@ -246,7 +246,7 @@
 
     renderTopList(topEventsList, stats.topEvents || [], "No event data yet.");
     renderTopList(topProductsList, stats.topProducts || [], "No product click data yet.");
-    renderTopList(topIpsList, stats.topIps || [], "No IP data yet.");
+    renderTopIpList(topIpsList, stats.topIps || [], "No IP data yet.");
     renderVisitorConnections(stats.recentVisitors || []);
     renderSessionActivity(stats.recentSessions || []);
   }
@@ -266,13 +266,33 @@
       .join("");
   }
 
+  function renderTopIpList(node, list, emptyLabel) {
+    if (!node) {
+      return;
+    }
+
+    if (!Array.isArray(list) || list.length === 0) {
+      node.innerHTML = `<li class="muted">${escapeHtml(emptyLabel)}</li>`;
+      return;
+    }
+
+    node.innerHTML = list
+      .map((item) => {
+        const ip = escapeHtml(item.label || "Unknown");
+        const count = Number(item.count || 0);
+        const location = escapeHtml(item.location || "Unknown");
+        return `<li><strong>${ip}</strong> <span class="muted">(${count})</span><br><span class="muted">${location}</span></li>`;
+      })
+      .join("");
+  }
+
   function renderVisitorConnections(list) {
     if (!visitorConnectionsBody) {
       return;
     }
 
     if (!Array.isArray(list) || list.length === 0) {
-      visitorConnectionsBody.innerHTML = "<tr><td colspan='9' class='muted'>No visitor data yet.</td></tr>";
+      visitorConnectionsBody.innerHTML = "<tr><td colspan='10' class='muted'>No visitor data yet.</td></tr>";
       return;
     }
 
@@ -280,11 +300,13 @@
       .map((item) => {
         const label = item.isOwner ? "Me" : "Visitor";
         const ips = Array.isArray(item.ips) && item.ips.length ? item.ips.join(", ") : "-";
+        const location = formatLocationSummary(item);
         return `
           <tr>
             <td>${escapeHtml(label)}</td>
             <td>${escapeHtml(item.visitorId || "-")}</td>
             <td>${escapeHtml(ips)}</td>
+            <td>${escapeHtml(location)}</td>
             <td>${escapeHtml(formatDate(item.firstSeen))}</td>
             <td>${escapeHtml(formatDate(item.lastSeen))}</td>
             <td>${escapeHtml(formatDuration(item.totalConnectedMs))}</td>
@@ -303,7 +325,7 @@
     }
 
     if (!Array.isArray(list) || list.length === 0) {
-      sessionActivityBody.innerHTML = "<tr><td colspan='8' class='muted'>No session data yet.</td></tr>";
+      sessionActivityBody.innerHTML = "<tr><td colspan='9' class='muted'>No session data yet.</td></tr>";
       return;
     }
 
@@ -311,11 +333,13 @@
       .map((item) => {
         const label = item.isOwner ? "Me" : "Visitor";
         const ip = Array.isArray(item.ips) && item.ips.length ? item.ips[0] : "-";
+        const location = item.primaryLocation || formatLocationSummary(item);
         return `
           <tr>
             <td>${escapeHtml(label)}</td>
             <td>${escapeHtml(item.sessionId || "-")}</td>
             <td>${escapeHtml(ip)}</td>
+            <td>${escapeHtml(location || "-")}</td>
             <td>${escapeHtml(formatDate(item.firstSeen))}</td>
             <td>${escapeHtml(formatDate(item.lastSeen))}</td>
             <td>${escapeHtml(formatDuration(item.durationMs))}</td>
@@ -325,6 +349,32 @@
         `;
       })
       .join("");
+  }
+
+  function formatLocationSummary(item) {
+    if (!item || typeof item !== "object") {
+      return "-";
+    }
+
+    const explicit = String(item.locationSummary || "").trim();
+    if (explicit) {
+      return explicit;
+    }
+
+    const details = Array.isArray(item.ipDetails) ? item.ipDetails : [];
+    const locations = Array.from(
+      new Set(
+        details
+          .map((entry) => String((entry && entry.location) || "").trim())
+          .filter(Boolean)
+      )
+    );
+    if (locations.length > 0) {
+      return locations.join(" | ");
+    }
+
+    const fallback = String(item.primaryLocation || "").trim();
+    return fallback || "-";
   }
 
   async function loadSupportRequests() {

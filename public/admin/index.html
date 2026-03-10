@@ -153,7 +153,7 @@
 
           <article class="card">
             <h2>Visitor Connections</h2>
-            <p class="muted">IP addresses, first seen, last seen, sessions, and total connected time.</p>
+            <p class="muted">IP addresses, approximate locations, first seen, last seen, sessions, and total connected time.</p>
             <div class="table-wrap">
               <table class="admin-table">
                 <thead>
@@ -161,6 +161,7 @@
                     <th>Label</th>
                     <th>Visitor ID</th>
                     <th>IPs</th>
+                    <th>Location</th>
                     <th>First Seen</th>
                     <th>Last Seen</th>
                     <th>Connected Time</th>
@@ -170,7 +171,7 @@
                   </tr>
                 </thead>
                 <tbody data-visitor-connections-body>
-                  <tr><td colspan="9" class="muted">No visitor data yet.</td></tr>
+                  <tr><td colspan="10" class="muted">No visitor data yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -178,7 +179,7 @@
 
           <article class="card">
             <h2>Session Activity</h2>
-            <p class="muted">Per-session timeline with active duration and source IP.</p>
+            <p class="muted">Per-session timeline with active duration, source IP, and approximate location.</p>
             <div class="table-wrap">
               <table class="admin-table">
                 <thead>
@@ -186,6 +187,7 @@
                     <th>Label</th>
                     <th>Session ID</th>
                     <th>IP</th>
+                    <th>Location</th>
                     <th>Started</th>
                     <th>Last Seen</th>
                     <th>Duration</th>
@@ -194,7 +196,7 @@
                   </tr>
                 </thead>
                 <tbody data-session-activity-body>
-                  <tr><td colspan="8" class="muted">No session data yet.</td></tr>
+                  <tr><td colspan="9" class="muted">No session data yet.</td></tr>
                 </tbody>
               </table>
             </div>
