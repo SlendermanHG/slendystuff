@@ -790,6 +790,217 @@ button.btn::after {
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* Admin Cyber Deck Theme */
+body.admin-shell {
+  --admin-neon-a: #35f2c4;
+  --admin-neon-b: #43a3ff;
+  --admin-neon-c: #ff2ea6;
+  --admin-bg-a: #05090f;
+  --admin-bg-b: #090f1a;
+  --admin-bg-c: #0d1526;
+  --admin-panel: rgba(6, 14, 28, 0.88);
+  --admin-line: rgba(83, 221, 255, 0.34);
+  --admin-line-strong: rgba(83, 221, 255, 0.7);
+  background:
+    radial-gradient(circle at 12% -4%, rgba(67, 163, 255, 0.24), transparent 42%),
+    radial-gradient(circle at 90% 10%, rgba(53, 242, 196, 0.2), transparent 44%),
+    radial-gradient(circle at 45% 115%, rgba(255, 46, 166, 0.22), transparent 40%),
+    linear-gradient(155deg, var(--admin-bg-a), var(--admin-bg-b) 50%, var(--admin-bg-c));
+}
+
+body.admin-shell::before {
+  background:
+    linear-gradient(to right, rgba(67, 163, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(67, 163, 255, 0.08) 1px, transparent 1px);
+  background-size: 38px 38px, 38px 38px;
+  opacity: 0.4;
+}
+
+body.admin-shell::after {
+  background:
+    linear-gradient(to bottom, transparent 0%, rgba(83, 221, 255, 0.03) 48%, transparent 100%);
+  animation: adminScan 6s linear infinite;
+}
+
+body.admin-shell .site-header {
+  border-bottom-color: rgba(83, 221, 255, 0.18);
+  background: linear-gradient(150deg, rgba(4, 10, 19, 0.95), rgba(6, 14, 25, 0.88));
+}
+
+body.admin-shell .brand-mark {
+  background:
+    radial-gradient(circle at 22% 18%, rgba(255, 255, 255, 0.55), transparent 36%),
+    linear-gradient(130deg, var(--admin-neon-b), var(--admin-neon-a) 60%, var(--admin-neon-c));
+  box-shadow: 0 0 18px rgba(67, 163, 255, 0.6), 0 0 26px rgba(53, 242, 196, 0.3);
+}
+
+body.admin-shell .admin-wrap {
+  width: min(1400px, calc(100% - 2rem));
+  padding-top: 1.2rem;
+}
+
+body.admin-shell .admin-command-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid rgba(83, 221, 255, 0.45);
+  background:
+    linear-gradient(150deg, rgba(4, 13, 26, 0.95), rgba(5, 18, 34, 0.92)),
+    linear-gradient(120deg, rgba(67, 163, 255, 0.14), rgba(53, 242, 196, 0.08));
+  box-shadow: 0 0 28px rgba(67, 163, 255, 0.2), inset 0 0 0 1px rgba(67, 163, 255, 0.14);
+}
+
+body.admin-shell .admin-command-deck h1 {
+  font-size: clamp(1.3rem, 2.3vw, 2rem);
+  background: linear-gradient(92deg, #9de9ff, #66ffd8 48%, #ff83d1 96%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+body.admin-shell .admin-command-meta {
+  display: grid;
+  gap: 0.36rem;
+  justify-items: end;
+}
+
+body.admin-shell .admin-command-meta .kicker {
+  border-color: rgba(83, 221, 255, 0.45);
+  color: #a7ffff;
+  background: rgba(6, 24, 38, 0.8);
+  font-family: "Space Mono", monospace;
+}
+
+body.admin-shell .admin-panel,
+body.admin-shell .admin-auth,
+body.admin-shell .admin-content {
+  gap: 1rem;
+}
+
+body.admin-shell .card,
+body.admin-shell .human-site .hero-copy {
+  border-color: rgba(83, 221, 255, 0.24);
+  background:
+    linear-gradient(155deg, var(--admin-panel), rgba(8, 20, 36, 0.94)),
+    linear-gradient(125deg, rgba(53, 242, 196, 0.06), rgba(67, 163, 255, 0.08), rgba(255, 46, 166, 0.06));
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(83, 221, 255, 0.08);
+}
+
+body.admin-shell .card::before {
+  border-style: solid;
+  border-color: rgba(83, 221, 255, 0.12);
+}
+
+body.admin-shell .eyebrow {
+  color: #8de7ff;
+}
+
+body.admin-shell .muted {
+  color: #b2c7d9;
+}
+
+body.admin-shell .admin-tabs [data-admin-tab] {
+  border: 1px solid rgba(83, 221, 255, 0.28);
+  color: #bfe6ff;
+  background: linear-gradient(145deg, rgba(6, 16, 30, 0.92), rgba(9, 20, 36, 0.92));
+}
+
+body.admin-shell .admin-tabs [data-admin-tab].active {
+  color: #081a17;
+  border-color: var(--admin-line-strong);
+  background: linear-gradient(120deg, var(--admin-neon-a), #b9ffee);
+  box-shadow: 0 0 0 1px rgba(83, 221, 255, 0.46), 0 0 24px rgba(53, 242, 196, 0.34);
+}
+
+body.admin-shell .btn,
+body.admin-shell button.btn {
+  color: #071116;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.35), transparent 40%),
+    linear-gradient(120deg, var(--admin-neon-b), var(--admin-neon-a) 58%, #9fffd9);
+  box-shadow: 0 0 20px rgba(67, 163, 255, 0.32);
+}
+
+body.admin-shell .btn-ghost {
+  color: #bde8ff;
+  border-color: rgba(83, 221, 255, 0.33);
+  background: linear-gradient(145deg, rgba(8, 20, 36, 0.92), rgba(9, 26, 42, 0.92));
+}
+
+body.admin-shell .btn-ghost:hover,
+body.admin-shell .btn-ghost:focus-visible {
+  border-color: var(--admin-line-strong);
+  box-shadow: 0 0 20px rgba(67, 163, 255, 0.35);
+}
+
+body.admin-shell .admin-table {
+  border: 1px solid rgba(83, 221, 255, 0.2);
+  min-width: 920px;
+  font-family: "Space Mono", monospace;
+  background: rgba(5, 13, 23, 0.88);
+}
+
+body.admin-shell .admin-table th {
+  color: #89e6ff;
+  background: rgba(10, 20, 34, 0.92);
+  border-bottom-color: rgba(83, 221, 255, 0.28);
+}
+
+body.admin-shell .admin-table th,
+body.admin-shell .admin-table td {
+  border-bottom-color: rgba(83, 221, 255, 0.16);
+}
+
+body.admin-shell .admin-table tbody tr:nth-child(2n) {
+  background: rgba(53, 242, 196, 0.04);
+}
+
+body.admin-shell .admin-table tbody tr:hover {
+  background: rgba(67, 163, 255, 0.12);
+}
+
+body.admin-shell .admin-table input,
+body.admin-shell .admin-table textarea,
+body.admin-shell .field input,
+body.admin-shell .field textarea,
+body.admin-shell .field select {
+  border-color: rgba(83, 221, 255, 0.28);
+  color: #d7ecff;
+  background: linear-gradient(150deg, rgba(5, 13, 24, 0.96), rgba(8, 21, 34, 0.94));
+}
+
+body.admin-shell .admin-table input:focus,
+body.admin-shell .admin-table textarea:focus,
+body.admin-shell .field input:focus,
+body.admin-shell .field textarea:focus,
+body.admin-shell .field select:focus {
+  border-color: rgba(83, 221, 255, 0.75);
+  box-shadow: 0 0 0 3px rgba(67, 163, 255, 0.2), 0 0 18px rgba(67, 163, 255, 0.25);
+}
+
+body.admin-shell .status.ok {
+  color: #7bffd6;
+  text-shadow: 0 0 8px rgba(53, 242, 196, 0.3);
+}
+
+body.admin-shell .status.error {
+  color: #ff9ecf;
+  text-shadow: 0 0 8px rgba(255, 46, 166, 0.35);
+}
+
+@keyframes adminScan {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
 .overlay {
   position: fixed;
   inset: 0;
@@ -1035,6 +1246,14 @@ button.btn::after {
   .grid.three,
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  body.admin-shell .admin-command-deck {
+    grid-template-columns: 1fr;
+  }
+
+  body.admin-shell .admin-command-meta {
+    justify-items: start;
   }
 
   .tilt-card:nth-child(2n),

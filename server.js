@@ -1088,7 +1088,9 @@ async function buildAdminStats() {
   const ageEntries = await readRecentLogEntries("age-verification", 7);
   const checkoutSessionEntries = await readRecentLogEntries("checkout-session", 7);
   const checkoutFreeEntries = await readRecentLogEntries("checkout-free", 7);
+  const checkoutAttemptEntries = await readRecentLogEntries("checkout-attempt", 7);
   const checkoutEntries = [...checkoutSessionEntries, ...checkoutFreeEntries];
+  const couponEvents = [...checkoutEntries, ...checkoutAttemptEntries];
   const sessions = buildSessionSummaries(analyticsEntries);
   const visitors = buildVisitorSummaries(sessions);
   const now = Date.now();
@@ -1105,12 +1107,27 @@ async function buildAdminStats() {
     6
   );
   const topIpsRaw = topCounts(analyticsEntries.map((entry) => entry.ip), 10);
-  const topCoupons = topCounts(
-    checkoutEntries
-      .map((entry) => safeString(entry.couponCode, "").trim().toUpperCase())
-      .filter(Boolean),
-    10
-  );
+  const couponCountMap = new Map();
+  for (const entry of couponEvents) {
+    const code = safeString(entry.couponCode, "").trim().toUpperCase();
+    if (!code) {
+      continue;
+    }
+    couponCountMap.set(code, (couponCountMap.get(code) || 0) + 1);
+  }
+  for (const coupon of Array.isArray(settingsCache.coupons) ? settingsCache.coupons : []) {
+    const code = safeString(coupon && coupon.code, "").trim().toUpperCase();
+    if (!code) {
+      continue;
+    }
+    if (!couponCountMap.has(code)) {
+      couponCountMap.set(code, 0);
+    }
+  }
+  const topCoupons = Array.from(couponCountMap.entries())
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 12)
+    .map(([label, count]) => ({ label, count }));
 
   const ipLookupSet = new Set();
   for (const item of topIpsRaw) {
@@ -1188,9 +1205,12 @@ async function buildAdminStats() {
       queueClosed: supportRequestsCache.filter((item) => item.status === "closed").length
     },
     coupons: {
+      attempts24h: countEntriesSince(checkoutAttemptEntries, since24h),
+      attempts7d: countEntriesSince(checkoutAttemptEntries, since7d),
       checkouts24h: countEntriesSince(checkoutEntries, since24h),
       checkouts7d: countEntriesSince(checkoutEntries, since7d),
-      couponCheckouts7d: checkoutEntries.filter((entry) => safeString(entry.couponCode, "").trim().length > 0).length
+      couponCheckouts7d: checkoutEntries.filter((entry) => safeString(entry.couponCode, "").trim().length > 0).length,
+      couponAttempts7d: checkoutAttemptEntries.filter((entry) => safeString(entry.couponCode, "").trim().length > 0).length
     },
     ageGate: {
       approvals7d: ageEntries.filter((entry) => entry.allowed === true).length,
@@ -2315,6 +2335,23 @@ app.post("/api/checkout/cart-session", checkoutRateLimiter, async (req, res) => 
     const lineItems = couponResult.lineItems;
     const subtotalCents = lineItems.reduce((sum, item) => sum + item.unitAmountCents * item.qty, 0);
     const isFreeCheckout = couponResult.applied && couponResult.percentOff >= 100;
+    await appendLog(
+      "checkout-attempt",
+      {
+        couponCode: couponCode || null,
+        couponRecognized: Boolean(coupon),
+        couponApplied: Boolean(couponResult.applied),
+        couponPercentOff: couponResult.applied ? couponResult.percentOff : 0,
+        remodelDiscountApplied: remodeled.discountApplied,
+        remodelDiscountPercent: remodeled.discountApplied ? remodeled.discountPercent : 0,
+        subtotalCents,
+        lineItemCount: lineItems.length,
+        stripeConfigured: Boolean(
+          safeString((secretsCache.apiKeys && secretsCache.apiKeys.stripeSecret) || process.env.STRIPE_SECRET_KEY, "").trim()
+        )
+      },
+      req
+    );
 
     if (isFreeCheckout) {
       await appendLog(

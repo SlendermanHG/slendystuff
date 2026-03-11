@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow">
   <link rel="stylesheet" href="/styles.css">
 </head>
-<body>
+<body class="admin-shell">
   <header class="site-header">
     <div class="shell nav-wrap">
       <a class="brand" href="/">
@@ -23,6 +23,19 @@
 
   <main class="shell admin-wrap">
     <section class="admin-panel">
+      <article class="card admin-command-deck">
+        <div>
+          <p class="eyebrow">Command Deck</p>
+          <h1>slendystuff Admin Grid</h1>
+          <p class="muted">Real-time audience, account, support, coupon, and checkout telemetry.</p>
+        </div>
+        <div class="admin-command-meta">
+          <p class="kicker">NODE: WEBSITEMANBOT</p>
+          <p class="kicker">ZONE: AMERICA/NEW_YORK</p>
+          <p class="kicker">CLOCK: <span data-admin-clock>--:--:--</span></p>
+        </div>
+      </article>
+
       <article class="card admin-auth" data-admin-auth>
         <h1>Admin Login</h1>
         <p class="muted">Use a strong `ADMIN_PASSWORD` (upper/lower/digit/symbol, 12+ chars by default).</p>
@@ -79,6 +92,16 @@
                 <p class="eyebrow">Avg Session</p>
                 <h3 data-stat="avgSessionMinutes24h">0.0m</h3>
                 <p class="muted">Average connected time per session (24h)</p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Coupon Attempts</p>
+                <h3 data-stat="couponAttempts7d">0</h3>
+                <p class="muted">Coupon attempts in the last 7 days</p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Coupon Checkouts</p>
+                <h3 data-stat="couponCheckouts7d">0</h3>
+                <p class="muted">Completed coupon checkouts in the last 7 days</p>
               </div>
             </div>
             <div class="grid two">

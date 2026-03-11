@@ -34,9 +34,12 @@
   const statIps24h = document.querySelector("[data-stat='ips24h']");
   const statActiveSessions15m = document.querySelector("[data-stat='activeSessions15m']");
   const statAvgSessionMinutes24h = document.querySelector("[data-stat='avgSessionMinutes24h']");
+  const statCouponAttempts7d = document.querySelector("[data-stat='couponAttempts7d']");
+  const statCouponCheckouts7d = document.querySelector("[data-stat='couponCheckouts7d']");
   const accountStatTotal = document.querySelector("[data-account-stat='total']");
   const accountStatNew7d = document.querySelector("[data-account-stat='new7d']");
   const accountStatActive30d = document.querySelector("[data-account-stat='active30d']");
+  const adminClockNode = document.querySelector("[data-admin-clock]");
 
   const productTableBody = document.querySelector("[data-products-body]");
   const addProductButton = document.querySelector("[data-add-product]");
@@ -84,6 +87,7 @@
     });
 
     loginForm.addEventListener("submit", onLogin);
+    startAdminClock();
     saveButton.addEventListener("click", onSave);
     addProductButton.addEventListener("click", addProductRow);
     if (addCouponButton) {
@@ -221,6 +225,7 @@
     const traffic = stats.traffic || {};
     const connections = stats.connections || {};
     const support = stats.support || {};
+    const coupons = stats.coupons || {};
     const queueOpen = Number(support.queueNew || 0) + Number(support.queueInProgress || 0);
 
     if (statVisitors24h) {
@@ -246,6 +251,12 @@
     if (statAvgSessionMinutes24h) {
       const avg = Number(connections.avgSessionMinutes24h || 0);
       statAvgSessionMinutes24h.textContent = `${avg.toFixed(1)}m`;
+    }
+    if (statCouponAttempts7d) {
+      statCouponAttempts7d.textContent = String(coupons.couponAttempts7d || 0);
+    }
+    if (statCouponCheckouts7d) {
+      statCouponCheckouts7d.textContent = String(coupons.couponCheckouts7d || 0);
     }
 
     if (queuePill) {
@@ -832,6 +843,19 @@
     if (settingsTabButton) {
       settingsTabButton.classList.toggle("active", !showDashboard);
     }
+  }
+
+  function startAdminClock() {
+    if (!adminClockNode) {
+      return;
+    }
+
+    const updateClock = () => {
+      adminClockNode.textContent = new Date().toLocaleTimeString();
+    };
+
+    updateClock();
+    window.setInterval(updateClock, 1000);
   }
 
   function buildCsrfHeaders() {
