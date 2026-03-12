@@ -1339,6 +1339,7 @@ body.church-site {
   --rwc-alt: #ececec;
   --rwc-border: #c5c5c5;
   --rwc-deep: #183135;
+  --rwc-main: #183135;
   --rwc-highlight: #601d79;
   --rwc-highlight-soft: #ab76ce;
   color: var(--rwc-text);
@@ -1363,12 +1364,12 @@ body.church-site h3 {
 }
 
 body.church-site a {
-  color: var(--rwc-primary);
+  color: var(--rwc-main);
 }
 
 body.church-site a:hover,
 body.church-site a:focus-visible {
-  color: #5f77b6;
+  color: #2b5a62;
 }
 
 .church-header {
@@ -1448,8 +1449,8 @@ body.church-site a:focus-visible {
   font-weight: 800;
   font-size: 0.8rem;
   letter-spacing: 0.04em;
-  background: linear-gradient(145deg, #4a6ca9, var(--rwc-primary));
-  box-shadow: 0 8px 18px rgba(135, 167, 240, 0.42);
+  background: linear-gradient(145deg, #2b5a62, var(--rwc-main));
+  box-shadow: 0 8px 18px rgba(24, 49, 53, 0.34);
 }
 
 .church-brand-copy {
@@ -1512,7 +1513,7 @@ body.church-site a:focus-visible {
 .church-nav a:focus-visible {
   transform: translateY(-1px);
   box-shadow: 0 10px 18px rgba(24, 49, 53, 0.12);
-  border-color: rgba(135, 167, 240, 0.62);
+  border-color: rgba(24, 49, 53, 0.45);
   color: #192638;
 }
 
@@ -1549,7 +1550,7 @@ body.church-site a:focus-visible {
   font-family: "Hurricane", "Brush Script MT", cursive;
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 1;
-  color: #5f77b6;
+  color: var(--rwc-main);
 }
 
 .church-hero-copy h1 {
@@ -1577,8 +1578,8 @@ body.church-site a:focus-visible {
   font-size: 0.76rem;
   font-weight: 600;
   color: #23454c;
-  border: 1px solid rgba(135, 167, 240, 0.45);
-  background: rgba(135, 167, 240, 0.16);
+  border: 1px solid rgba(24, 49, 53, 0.35);
+  background: rgba(24, 49, 53, 0.1);
 }
 
 .church-cta-row {
@@ -1614,7 +1615,7 @@ body.church-site a:focus-visible {
 .church-btn-primary {
   border-color: transparent;
   color: #ffffff;
-  background: linear-gradient(145deg, #6f8fd8, var(--rwc-primary));
+  background: linear-gradient(145deg, #2b5a62, var(--rwc-main));
 }
 
 .church-btn-primary:hover,
