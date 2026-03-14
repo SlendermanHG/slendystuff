@@ -89,10 +89,9 @@
       setBusy(startCheckoutButton, true, "Preparing Stripe...");
       setStatus("Creating Stripe checkout session...", "");
       try {
-        const response = await fetch("/api/checkout/cart-session", {
+        const response = await app.apiFetch("/api/checkout/cart-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify({
             items: cartItems.map((item) => ({ id: item.id, qty: item.qty })),
             couponCode: selectedCouponCode,

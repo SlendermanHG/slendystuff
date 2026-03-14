@@ -40,7 +40,7 @@
       const payload = Object.fromEntries(new FormData(registerForm).entries());
 
       try {
-        const response = await fetch("/api/auth/register", {
+        const response = await app.apiFetch("/api/account/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -69,7 +69,7 @@
       const payload = Object.fromEntries(new FormData(loginForm).entries());
 
       try {
-        const response = await fetch("/api/auth/login", {
+        const response = await app.apiFetch("/api/account/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -93,14 +93,14 @@
 
   if (logoutButton) {
     logoutButton.addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await app.apiFetch("/api/account/logout", { method: "POST" });
       await hydrateSession();
     });
   }
 
   async function hydrateSession() {
     try {
-      const response = await fetch("/api/auth/session");
+      const response = await app.apiFetch("/api/account/session");
       const session = await parseJson(response);
 
       if (isBackendApiUnavailable(response, session)) {
@@ -115,7 +115,7 @@
         return;
       }
 
-      const summaryRes = await fetch("/api/account/summary");
+      const summaryRes = await app.apiFetch("/api/account/summary");
       const summary = await parseJson(summaryRes);
       if (isBackendApiUnavailable(summaryRes, summary)) {
         showAuth();

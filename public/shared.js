@@ -119,6 +119,47 @@
       return this.getCheckoutPageUrl(productId);
     },
 
+    getApiOrigin() {
+      const explicit = String(document.documentElement.getAttribute("data-api-origin") || "").trim();
+      if (explicit) {
+        return explicit.replace(/\/+$/, "");
+      }
+
+      const host = String(window.location.hostname || "").trim().toLowerCase();
+      const origin = String(window.location.origin || "").trim().replace(/\/+$/, "");
+      const staticHosts = new Set(["slendystuff.com", "www.slendystuff.com"]);
+      if (!host || host === "localhost" || host === "127.0.0.1") {
+        return origin;
+      }
+      if (host === "api.slendystuff.com" || host === "ops.slendystuff.com") {
+        return origin;
+      }
+      if (staticHosts.has(host) || host.endsWith(".github.io")) {
+        return "https://api.slendystuff.com";
+      }
+      return origin;
+    },
+
+    apiUrl(pathname) {
+      const path = String(pathname || "").trim();
+      if (!path) {
+        return this.getApiOrigin();
+      }
+      if (/^https?:\/\//i.test(path)) {
+        return path;
+      }
+      const normalized = path.startsWith("/") ? path : `/${path}`;
+      return `${this.getApiOrigin()}${normalized}`;
+    },
+
+    apiFetch(pathname, options = {}) {
+      const requestOptions = { ...options };
+      if (requestOptions.credentials == null) {
+        requestOptions.credentials = "include";
+      }
+      return fetch(this.apiUrl(pathname), requestOptions);
+    },
+
     getCart() {
       const raw = this.safeStorageGet(window.localStorage, CART_STORAGE_KEY);
       if (!raw) {
@@ -221,7 +262,7 @@
       if (useBeacon) {
         try {
           const blob = new Blob([body], { type: "application/json" });
-          const sent = navigator.sendBeacon("/api/track", blob);
+          const sent = navigator.sendBeacon(this.apiUrl("/api/track"), blob);
           if (sent) {
             return;
           }
@@ -230,10 +271,9 @@
         }
       }
 
-      await fetch("/api/track", {
+      await this.apiFetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         keepalive: options.keepalive !== false,
         body
       });
@@ -307,7 +347,7 @@
         return this.config;
       }
 
-      const response = await fetch("/api/public-config");
+      const response = await this.apiFetch("/api/public-config");
       const payload = await response.json();
       if (!payload.ok) {
         throw new Error("We could not load page details. Please refresh.");
@@ -331,7 +371,7 @@
     },
 
     async getAnydeskInfo() {
-      const response = await fetch("/api/support/anydesk");
+      const response = await this.apiFetch("/api/support/anydesk");
       const payload = await response.json();
       if (!payload.ok) {
         throw new Error("We could not load download details right now.");
@@ -413,7 +453,7 @@
 
         const submit = async (answer) => {
           try {
-            const response = await fetch("/api/age-verify", {
+            const response = await this.apiFetch("/api/age-verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

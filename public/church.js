@@ -36,7 +36,7 @@
   }
 
   try {
-    const response = await fetch("/api/church/rwcov", { credentials: "same-origin" });
+    const response = await app.apiFetch("/api/church/rwcov");
     const payload = await response.json();
     if (!response.ok || !payload.ok || !payload.church) {
       throw new Error(payload.error || "Could not load church details right now.");

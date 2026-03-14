@@ -1,0 +1,93 @@
+name: ${COMPOSE_PROJECT_NAME:-slendystuff}
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in ops/.env.oci}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in ops/.env.oci}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in ops/.env.oci}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ${OCI_POSTGRES_DATA_DIR:?set OCI_POSTGRES_DATA_DIR in ops/.env.oci}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build:
+      context: ..
+      dockerfile: ops/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${APP_PORT:-4173}
+      PERSIST_ROOT: /srv/websitemanbot/persist
+      DATA_DIR: /srv/websitemanbot/persist/data
+      LOG_DIR: /srv/websitemanbot/persist/logs
+      PROTON_LOG_DIR: /srv/websitemanbot/persist/logs/proton
+      MANAGED_REPO_PATH: ${MANAGED_REPO_PATH:-/srv/websitemanbot/repo}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?set ADMIN_EMAIL in ops/.env.oci}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in ops/.env.oci}
+      ADMIN_PASSWORD_MIN_LENGTH: ${ADMIN_PASSWORD_MIN_LENGTH:-14}
+      ENFORCE_STRONG_ADMIN_PASSWORD: ${ENFORCE_STRONG_ADMIN_PASSWORD:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      TWILIO_OWNER_PHONE: ${TWILIO_OWNER_PHONE:-}
+      PROTON_SMTP_HOST: ${PROTON_SMTP_HOST:-}
+      PROTON_SMTP_PORT: ${PROTON_SMTP_PORT:-}
+      PROTON_SMTP_USER: ${PROTON_SMTP_USER:-}
+      PROTON_SMTP_PASSWORD: ${PROTON_SMTP_PASSWORD:-}
+      PROTON_SMTP_FROM_EMAIL: ${PROTON_SMTP_FROM_EMAIL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-codex}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
+      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL:-}
+      OWNER_TEXT_APPROVAL_SECRET: ${OWNER_TEXT_APPROVAL_SECRET:-}
+    volumes:
+      - ${OCI_APP_PERSIST_DIR:?set OCI_APP_PERSIST_DIR in ops/.env.oci}:/srv/websitemanbot/persist
+      - ${OCI_REPO_ROOT:?set OCI_REPO_ROOT in ops/.env.oci}:/srv/websitemanbot/repo
+    expose:
+      - "${APP_PORT:-4173}"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 4173) + '/api/public-config').then((res) => process.exit(res.ok ? 0 : 1)).catch(() => process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in ops/.env.oci}
+      OPS_DOMAIN: ${OPS_DOMAIN:?set OPS_DOMAIN in ops/.env.oci}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in ops/.env.oci}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${OCI_CADDY_DATA_DIR:?set OCI_CADDY_DATA_DIR in ops/.env.oci}:/data
+      - ${OCI_CADDY_CONFIG_DIR:?set OCI_CADDY_CONFIG_DIR in ops/.env.oci}:/config

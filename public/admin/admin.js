@@ -1,903 +1,735 @@
 (() => {
-  const loginPane = document.querySelector("[data-admin-auth]");
-  const contentPane = document.querySelector("[data-admin-content]");
-  const loginForm = document.querySelector("[data-login-form]");
-  const loginStatus = document.querySelector("[data-login-status]");
-  const saveButton = document.querySelector("[data-save-settings]");
-  const saveStatus = document.querySelector("[data-save-status]");
-  const logoutButton = document.querySelector("[data-logout]");
-  const refreshAnydeskButton = document.querySelector("[data-refresh-anydesk]");
-  const refreshStatsButton = document.querySelector("[data-refresh-stats]");
-  const refreshAccountsButton = document.querySelector("[data-refresh-accounts]");
-  const claimOwnerBrowserButton = document.querySelector("[data-claim-owner-browser]");
-  const refreshSupportRequestsButton = document.querySelector("[data-refresh-support-requests]");
-  const statsStatus = document.querySelector("[data-stats-status]");
-  const accountsStatus = document.querySelector("[data-accounts-status]");
-  const ownerClaimStatus = document.querySelector("[data-owner-claim-status]");
-  const dashboardTabButton = document.querySelector("[data-admin-tab='dashboard']");
-  const settingsTabButton = document.querySelector("[data-admin-tab='settings']");
-  const dashboardView = document.querySelector("[data-admin-view='dashboard']");
-  const settingsView = document.querySelector("[data-admin-view='settings']");
-  const queuePill = document.querySelector("[data-queue-pill]");
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => Array.from(document.querySelectorAll(s));
+  const loginPane = $("[data-admin-auth]");
+  const contentPane = $("[data-admin-content]");
+  const loginForm = $("[data-login-form]");
+  const loginStatus = $("[data-login-status]");
+  const dashboardStatus = $("[data-dashboard-status]");
+  const saveStatus = $("[data-save-status]");
+  const operatorStatus = $("[data-operator-status]");
+  const operatorPrompt = $("[data-operator-prompt]");
+  const operatorOutput = $("[data-operator-output]");
+  const supportBody = $("[data-support-requests-body]");
+  const contactBody = $("[data-contact-messages-body]");
+  const activityList = $("[data-manager-activity]");
+  const securityList = $("[data-security-findings]");
+  const productsBody = $("[data-products-body]");
+  const couponsBody = $("[data-coupons-body]");
+  const tabs = $$("[data-admin-tab]");
+  const views = $$("[data-admin-view]");
 
-  const supportRequestsBody = document.querySelector("[data-support-requests-body]");
-  const topEventsList = document.querySelector("[data-top-events]");
-  const topProductsList = document.querySelector("[data-top-products]");
-  const topIpsList = document.querySelector("[data-top-ips]");
-  const topCouponsList = document.querySelector("[data-top-coupons]");
-  const visitorConnectionsBody = document.querySelector("[data-visitor-connections-body]");
-  const sessionActivityBody = document.querySelector("[data-session-activity-body]");
-  const accountsBody = document.querySelector("[data-accounts-body]");
-  const statVisitors24h = document.querySelector("[data-stat='visitors24h']");
-  const statEvents7d = document.querySelector("[data-stat='events7d']");
-  const statQueueOpen = document.querySelector("[data-stat='queueOpen']");
-  const statIps24h = document.querySelector("[data-stat='ips24h']");
-  const statActiveSessions15m = document.querySelector("[data-stat='activeSessions15m']");
-  const statAvgSessionMinutes24h = document.querySelector("[data-stat='avgSessionMinutes24h']");
-  const statCouponAttempts7d = document.querySelector("[data-stat='couponAttempts7d']");
-  const statCouponCheckouts7d = document.querySelector("[data-stat='couponCheckouts7d']");
-  const accountStatTotal = document.querySelector("[data-account-stat='total']");
-  const accountStatNew7d = document.querySelector("[data-account-stat='new7d']");
-  const accountStatActive30d = document.querySelector("[data-account-stat='active30d']");
-  const adminClockNode = document.querySelector("[data-admin-clock]");
-
-  const productTableBody = document.querySelector("[data-products-body]");
-  const addProductButton = document.querySelector("[data-add-product]");
-  const couponTableBody = document.querySelector("[data-coupons-body]");
-  const addCouponButton = document.querySelector("[data-add-coupon]");
-
-  const formRefs = {
-    brandName: document.querySelector("[name='brandName']"),
-    brandTagline: document.querySelector("[name='brandTagline']"),
-    heroTitle: document.querySelector("[name='heroTitle']"),
-    heroSubtitle: document.querySelector("[name='heroSubtitle']"),
-    accentHex: document.querySelector("[name='accentHex']"),
-    stripeStarter: document.querySelector("[name='stripeStarter']"),
-    stripePro: document.querySelector("[name='stripePro']"),
-    stripeReset: document.querySelector("[name='stripeReset']"),
-    supportEmail: document.querySelector("[name='supportEmail']"),
-    anydeskSourceUrl: document.querySelector("[name='anydeskSourceUrl']"),
-    refreshIntervalHours: document.querySelector("[name='refreshIntervalHours']"),
-    supportIntro: document.querySelector("[name='supportIntro']"),
-    customTrackingEnabled: document.querySelector("[name='customTrackingEnabled']"),
-    protonDriveLogPath: document.querySelector("[name='protonDriveLogPath']"),
-    gaMeasurementId: document.querySelector("[name='gaMeasurementId']"),
-    metaPixelId: document.querySelector("[name='metaPixelId']"),
-    customWebhookUrl: document.querySelector("[name='customWebhookUrl']"),
-    apiKeyOpenai: document.querySelector("[name='apiKeyOpenai']"),
-    apiKeyDiscord: document.querySelector("[name='apiKeyDiscord']"),
-    apiKeyStripeSecret: document.querySelector("[name='apiKeyStripeSecret']"),
-    discordRemodelCode: document.querySelector("[name='discordRemodelCode']"),
-    discordRemodelDiscountPercent: document.querySelector("[name='discordRemodelDiscountPercent']")
+  const stats = {
+    visitors24h: $("[data-stat='visitors24h']"),
+    events7d: $("[data-stat='events7d']"),
+    queueOpen: $("[data-stat='queueOpen']"),
+    accountTotal: $("[data-stat='accountTotal']")
   };
 
-  let currentSettings = null;
-  let currentSecrets = null;
-  let csrfToken = "";
-  let supportRequests = [];
-  let accounts = [];
+  const manager = {
+    critical: $("[data-manager-critical]"),
+    siteHealth: $("[data-manager-site-health]"),
+    repoPath: $("[data-repo-path]"),
+    repoBranch: $("[data-repo-branch]"),
+    repoRemote: $("[data-repo-remote]"),
+    repoDirty: $("[data-repo-dirty]"),
+    repoLastCommit: $("[data-repo-last-commit]"),
+    domainName: $("[data-domain-name]"),
+    domainProvider: $("[data-domain-provider]"),
+    lastScan: $("[data-manager-last-scan]"),
+    siteCheck: $("[data-manager-site-check]"),
+    scanSummary: $("[data-manager-scan-summary]"),
+    readinessList: $("[data-phase-one-readiness]")
+  };
 
-  init().catch((error) => {
-    setStatus(loginStatus, error.message, "error");
-  });
+  const form = {
+    brandName: $("[name='brandName']"),
+    brandTagline: $("[name='brandTagline']"),
+    heroTitle: $("[name='heroTitle']"),
+    heroSubtitle: $("[name='heroSubtitle']"),
+    accentHex: $("[name='accentHex']"),
+    stripeStarter: $("[name='stripeStarter']"),
+    stripePro: $("[name='stripePro']"),
+    stripeReset: $("[name='stripeReset']"),
+    supportEmail: $("[name='supportEmail']"),
+    anydeskSourceUrl: $("[name='anydeskSourceUrl']"),
+    refreshIntervalHours: $("[name='refreshIntervalHours']"),
+    supportIntro: $("[name='supportIntro']"),
+    customTrackingEnabled: $("[name='customTrackingEnabled']"),
+    opsGithubRepo: $("[name='opsGithubRepo']"),
+    opsDefaultBranch: $("[name='opsDefaultBranch']"),
+    opsManagedRepoPath: $("[name='opsManagedRepoPath']"),
+    opsDomainName: $("[name='opsDomainName']"),
+    opsApiSubdomain: $("[name='opsApiSubdomain']"),
+    opsOpsSubdomain: $("[name='opsOpsSubdomain']"),
+    opsDomainProvider: $("[name='opsDomainProvider']"),
+    opsDnsNotes: $("[name='opsDnsNotes']"),
+    opsAlertEmail: $("[name='opsAlertEmail']"),
+    opsSecurityScanIntervalMinutes: $("[name='opsSecurityScanIntervalMinutes']"),
+    opsCriticalReminderMinutes: $("[name='opsCriticalReminderMinutes']"),
+    opsNormalReminderMinutes: $("[name='opsNormalReminderMinutes']"),
+    opsOperatorBaseUrl: $("[name='opsOperatorBaseUrl']"),
+    opsOperatorModel: $("[name='opsOperatorModel']"),
+    opsAutoFixCritical: $("[name='opsAutoFixCritical']"),
+    opsNativeWindowsNotifications: $("[name='opsNativeWindowsNotifications']"),
+    opsBrowserNotifications: $("[name='opsBrowserNotifications']"),
+    opsCloudflareEnabled: $("[name='opsCloudflareEnabled']"),
+    opsLocalOwnerConsoleEnabled: $("[name='opsLocalOwnerConsoleEnabled']"),
+    opsSensitiveTextApprovalsRequireCode: $("[name='opsSensitiveTextApprovalsRequireCode']"),
+    opsOperatorFullAccess: $("[name='opsOperatorFullAccess']"),
+    opsOperatorSystemPrompt: $("[name='opsOperatorSystemPrompt']"),
+    protonDriveLogPath: $("[name='protonDriveLogPath']"),
+    gaMeasurementId: $("[name='gaMeasurementId']"),
+    metaPixelId: $("[name='metaPixelId']"),
+    customWebhookUrl: $("[name='customWebhookUrl']"),
+    discordRemodelCode: $("[name='discordRemodelCode']"),
+    discordRemodelDiscountPercent: $("[name='discordRemodelDiscountPercent']"),
+    twilioAccountSid: $("[name='twilioAccountSid']"),
+    twilioAuthToken: $("[name='twilioAuthToken']"),
+    twilioPhoneNumber: $("[name='twilioPhoneNumber']"),
+    twilioOwnerPhone: $("[name='twilioOwnerPhone']"),
+    protonSmtpHost: $("[name='protonSmtpHost']"),
+    protonSmtpPort: $("[name='protonSmtpPort']"),
+    protonSmtpUsername: $("[name='protonSmtpUsername']"),
+    protonSmtpPassword: $("[name='protonSmtpPassword']"),
+    protonFromEmail: $("[name='protonFromEmail']"),
+    ociSshHost: $("[name='ociSshHost']"),
+    ociSshUser: $("[name='ociSshUser']"),
+    ociSshKeyPath: $("[name='ociSshKeyPath']"),
+    ociBackupMountPath: $("[name='ociBackupMountPath']"),
+    cloudflareApiToken: $("[name='cloudflareApiToken']"),
+    cloudflareZoneId: $("[name='cloudflareZoneId']"),
+    cloudflareAccountEmail: $("[name='cloudflareAccountEmail']"),
+    ownerTextApprovalSecret: $("[name='ownerTextApprovalSecret']"),
+    apiKeyOpenai: $("[name='apiKeyOpenai']"),
+    apiKeyDiscord: $("[name='apiKeyDiscord']"),
+    apiKeyStripeSecret: $("[name='apiKeyStripeSecret']")
+  };
+
+  const state = {
+    csrfToken: "",
+    settings: null,
+    secrets: null,
+    support: [],
+    contact: [],
+    supportSeen: new Set(),
+    contactSeen: new Set(),
+    pollId: null
+  };
+
+  init().catch((error) => setStatus(loginStatus, error.message || "Failed to initialize.", "error"));
 
   async function init() {
-    document.querySelectorAll("[data-brand-name]").forEach((node) => {
-      node.textContent = "slendystuff";
-    });
-
-    loginForm.addEventListener("submit", onLogin);
-    startAdminClock();
-    saveButton.addEventListener("click", onSave);
-    addProductButton.addEventListener("click", addProductRow);
-    if (addCouponButton) {
-      addCouponButton.addEventListener("click", addCouponRow);
-    }
-    logoutButton.addEventListener("click", onLogout);
-    refreshAnydeskButton.addEventListener("click", onRefreshAnydesk);
-
-    if (refreshStatsButton) {
-      refreshStatsButton.addEventListener("click", loadDashboardStats);
-    }
-
-    if (refreshAccountsButton) {
-      refreshAccountsButton.addEventListener("click", loadAccounts);
-    }
-
-    if (claimOwnerBrowserButton) {
-      claimOwnerBrowserButton.addEventListener("click", onClaimOwnerBrowser);
-    }
-
-    if (refreshSupportRequestsButton) {
-      refreshSupportRequestsButton.addEventListener("click", loadSupportRequests);
-    }
-
-    if (dashboardTabButton) {
-      dashboardTabButton.addEventListener("click", () => setAdminView("dashboard"));
-    }
-
-    if (settingsTabButton) {
-      settingsTabButton.addEventListener("click", () => setAdminView("settings"));
-    }
-
-    const authenticated = await checkSession();
-    if (authenticated) {
-      await loadAdminData();
-      await loadDashboardData();
-      showContent();
-      setAdminView("dashboard");
-    } else {
+    loginForm?.addEventListener("submit", onLogin);
+    $("[data-refresh-dashboard]")?.addEventListener("click", loadDashboard);
+    $("[data-manual-security-scan]")?.addEventListener("click", onManualSecurityScan);
+    $("[data-save-settings]")?.addEventListener("click", onSaveSettings);
+    $("[data-refresh-anydesk]")?.addEventListener("click", onRefreshAnydesk);
+    $("[data-logout]")?.addEventListener("click", onLogout);
+    $("[data-add-product]")?.addEventListener("click", () => productsBody.appendChild(productRow()));
+    $("[data-add-coupon]")?.addEventListener("click", () => couponsBody.appendChild(couponRow()));
+    $("[data-operator-plan]")?.addEventListener("click", () => runOperator("plan"));
+    $("[data-operator-apply]")?.addEventListener("click", () => runOperator("apply"));
+    tabs.forEach((tab) => tab.addEventListener("click", () => setView(tab.dataset.adminTab || "dashboard")));
+    if (!(await checkSession())) {
       showLogin();
+      return;
     }
+    await Promise.all([loadSettings(), loadDashboard()]);
+    showContent();
+    setView("dashboard");
+    await maybeRequestNotifications();
+    startPolling();
   }
 
   async function checkSession() {
-    const response = await fetch("/api/admin/session", { credentials: "include" });
-    if (!response.ok) {
-      csrfToken = "";
+    try {
+      const payload = await api("/api/admin/session");
+      state.csrfToken = payload.csrfToken || "";
+      return Boolean(state.csrfToken);
+    } catch {
+      state.csrfToken = "";
       return false;
     }
-
-    const payload = await response.json();
-    if (!payload.ok || !payload.csrfToken) {
-      csrfToken = "";
-      return false;
-    }
-
-    csrfToken = payload.csrfToken;
-    return true;
   }
 
   async function onLogin(event) {
     event.preventDefault();
     setStatus(loginStatus, "Signing in...", "");
-
-    const formData = new FormData(loginForm);
-    const email = String(formData.get("email") || "").trim().toLowerCase();
-    const password = String(formData.get("password") || "");
-    const response = await fetch("/api/admin/login", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password })
-    });
-
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      setStatus(loginStatus, payload.error || "Login failed.", "error");
-      return;
+    const body = Object.fromEntries(new FormData(loginForm).entries());
+    try {
+      const payload = await api("/api/admin/login", { method: "POST", body, includeCsrf: false });
+      state.csrfToken = payload.csrfToken || "";
+      await Promise.all([loadSettings(), loadDashboard()]);
+      loginForm.reset();
+      showContent();
+      setView("dashboard");
+      await maybeRequestNotifications();
+      startPolling();
+      setStatus(loginStatus, "", "");
+    } catch (error) {
+      setStatus(loginStatus, error.message || "Login failed.", "error");
     }
-
-    csrfToken = payload.csrfToken || "";
-    await loadAdminData();
-    await loadDashboardData();
-    showContent();
-    setStatus(loginStatus, "", "");
-    loginForm.reset();
   }
 
   async function onLogout() {
-    await fetch("/api/admin/logout", {
-      method: "POST",
-      credentials: "include",
-      headers: buildCsrfHeaders()
-    });
-    csrfToken = "";
-    supportRequests = [];
-    accounts = [];
+    stopPolling();
+    try {
+      await api("/api/admin/logout", { method: "POST" });
+    } catch {}
+    state.csrfToken = "";
+    state.settings = null;
+    state.secrets = null;
+    state.support = [];
+    state.contact = [];
+    state.supportSeen.clear();
+    state.contactSeen.clear();
     showLogin();
   }
 
-  async function onClaimOwnerBrowser() {
-    setStatus(ownerClaimStatus, "Claiming this browser...", "");
-    const response = await fetch("/api/admin/claim-owner-browser", {
-      method: "POST",
-      credentials: "include",
-      headers: buildCsrfHeaders()
-    });
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      setStatus(ownerClaimStatus, payload.error || "Failed to mark this browser.", "error");
-      return;
-    }
-    setStatus(ownerClaimStatus, payload.message || "This browser is now labeled as Me.", "ok");
-    await loadDashboardStats();
+  async function loadSettings() {
+    const payload = await api("/api/admin/settings");
+    state.settings = payload.settings;
+    state.secrets = payload.secrets;
+    applySettings();
   }
 
-  async function loadDashboardData() {
-    await Promise.all([loadDashboardStats(), loadSupportRequests(), loadAccounts()]);
+  async function loadDashboard() {
+    setStatus(dashboardStatus, "Refreshing...", "");
+    try {
+      const [statsPayload, supportPayload, contactPayload, managerPayload, accountsPayload] = await Promise.all([
+        api("/api/admin/stats"),
+        api("/api/admin/support-requests"),
+        api("/api/admin/contact-messages"),
+        api("/api/admin/manager/status"),
+        api("/api/admin/accounts")
+      ]);
+      state.support = Array.isArray(supportPayload.requests) ? supportPayload.requests : [];
+      state.contact = Array.isArray(contactPayload.messages) ? contactPayload.messages : [];
+      renderStats(statsPayload.stats || {}, accountsPayload.stats || {});
+      renderSupport();
+      renderContact();
+      renderManager(managerPayload.manager || {});
+      notifyNew("support", state.support);
+      notifyNew("contact", state.contact);
+      setStatus(dashboardStatus, `Updated ${new Date().toLocaleTimeString()}.`, "ok");
+    } catch (error) {
+      setStatus(dashboardStatus, error.message || "Refresh failed.", "error");
+    }
   }
 
-  async function loadDashboardStats() {
-    setStatus(statsStatus, "Refreshing stats...", "");
-    const response = await fetch("/api/admin/stats", { credentials: "include" });
-    const payload = await response.json();
-
-    if (!response.ok || !payload.ok) {
-      setStatus(statsStatus, payload.error || "Failed to load stats.", "error");
-      return;
-    }
-
-    renderStats(payload.stats || {});
-    const stamp = payload.stats && payload.stats.generatedAt ? new Date(payload.stats.generatedAt) : new Date();
-    setStatus(statsStatus, `Updated ${stamp.toLocaleString()}`, "ok");
+  function renderStats(statsPayload, accountStats) {
+    const traffic = statsPayload.traffic || {};
+    const support = statsPayload.support || {};
+    text(stats.visitors24h, num(traffic.visitors24h));
+    text(stats.events7d, num(traffic.events7d));
+    text(stats.queueOpen, num(Number(support.queueNew || 0) + Number(support.queueInProgress || 0) + Number(support.queueWaitingOnOwner || 0)));
+    text(stats.accountTotal, num(accountStats.total || 0));
   }
 
-  function renderStats(stats) {
-    const traffic = stats.traffic || {};
-    const connections = stats.connections || {};
-    const support = stats.support || {};
-    const coupons = stats.coupons || {};
-    const queueOpen = Number(support.queueNew || 0) + Number(support.queueInProgress || 0);
-
-    if (statVisitors24h) {
-      statVisitors24h.textContent = String(traffic.visitors24h || 0);
-    }
-
-    if (statEvents7d) {
-      statEvents7d.textContent = String(traffic.events7d || 0);
-    }
-
-    if (statQueueOpen) {
-      statQueueOpen.textContent = String(queueOpen);
-    }
-
-    if (statIps24h) {
-      statIps24h.textContent = String(traffic.ips24h || 0);
-    }
-
-    if (statActiveSessions15m) {
-      statActiveSessions15m.textContent = String(connections.activeSessions15m || 0);
-    }
-
-    if (statAvgSessionMinutes24h) {
-      const avg = Number(connections.avgSessionMinutes24h || 0);
-      statAvgSessionMinutes24h.textContent = `${avg.toFixed(1)}m`;
-    }
-    if (statCouponAttempts7d) {
-      statCouponAttempts7d.textContent = String(coupons.couponAttempts7d || 0);
-    }
-    if (statCouponCheckouts7d) {
-      statCouponCheckouts7d.textContent = String(coupons.couponCheckouts7d || 0);
-    }
-
-    if (queuePill) {
-      queuePill.textContent = String(queueOpen);
-    }
-
-    renderTopList(topEventsList, stats.topEvents || [], "No event data yet.");
-    renderTopList(topProductsList, stats.topProducts || [], "No product click data yet.");
-    renderTopIpList(topIpsList, stats.topIps || [], "No IP data yet.");
-    renderTopList(topCouponsList, stats.topCoupons || [], "No coupon usage yet.");
-    renderVisitorConnections(stats.recentVisitors || []);
-    renderSessionActivity(stats.recentSessions || []);
-  }
-
-  function renderTopList(node, list, emptyLabel) {
-    if (!node) {
-      return;
-    }
-
-    if (!Array.isArray(list) || list.length === 0) {
-      node.innerHTML = `<li class="muted">${escapeHtml(emptyLabel)}</li>`;
-      return;
-    }
-
-    node.innerHTML = list
-      .map((item) => `<li>${escapeHtml(item.label || "Unknown")} <span class="muted">(${Number(item.count || 0)})</span></li>`)
-      .join("");
-  }
-
-  function renderTopIpList(node, list, emptyLabel) {
-    if (!node) {
-      return;
-    }
-
-    if (!Array.isArray(list) || list.length === 0) {
-      node.innerHTML = `<li class="muted">${escapeHtml(emptyLabel)}</li>`;
-      return;
-    }
-
-    node.innerHTML = list
-      .map((item) => {
-        const ip = escapeHtml(item.label || "Unknown");
-        const count = Number(item.count || 0);
-        const location = escapeHtml(item.location || "Unknown");
-        return `<li><strong>${ip}</strong> <span class="muted">(${count})</span><br><span class="muted">${location}</span></li>`;
-      })
-      .join("");
-  }
-
-  function renderVisitorConnections(list) {
-    if (!visitorConnectionsBody) {
-      return;
-    }
-
-    if (!Array.isArray(list) || list.length === 0) {
-      visitorConnectionsBody.innerHTML = "<tr><td colspan='10' class='muted'>No visitor data yet.</td></tr>";
-      return;
-    }
-
-    visitorConnectionsBody.innerHTML = list
-      .map((item) => {
-        const label = item.isOwner ? "Me" : "Visitor";
-        const ips = Array.isArray(item.ips) && item.ips.length ? item.ips.join(", ") : "-";
-        const location = formatLocationSummary(item);
-        return `
-          <tr>
-            <td>${escapeHtml(label)}</td>
-            <td>${escapeHtml(item.visitorId || "-")}</td>
-            <td>${escapeHtml(ips)}</td>
-            <td>${escapeHtml(location)}</td>
-            <td>${escapeHtml(formatDate(item.firstSeen))}</td>
-            <td>${escapeHtml(formatDate(item.lastSeen))}</td>
-            <td>${escapeHtml(formatDuration(item.totalConnectedMs))}</td>
-            <td>${escapeHtml(String(item.eventCount || 0))}</td>
-            <td>${escapeHtml(String(item.sessionCount || 0))}</td>
-            <td>${escapeHtml(item.latestPath || "-")}</td>
-          </tr>
-        `;
-      })
-      .join("");
-  }
-
-  function renderSessionActivity(list) {
-    if (!sessionActivityBody) {
-      return;
-    }
-
-    if (!Array.isArray(list) || list.length === 0) {
-      sessionActivityBody.innerHTML = "<tr><td colspan='9' class='muted'>No session data yet.</td></tr>";
-      return;
-    }
-
-    sessionActivityBody.innerHTML = list
-      .map((item) => {
-        const label = item.isOwner ? "Me" : "Visitor";
-        const ip = Array.isArray(item.ips) && item.ips.length ? item.ips[0] : "-";
-        const location = item.primaryLocation || formatLocationSummary(item);
-        return `
-          <tr>
-            <td>${escapeHtml(label)}</td>
-            <td>${escapeHtml(item.sessionId || "-")}</td>
-            <td>${escapeHtml(ip)}</td>
-            <td>${escapeHtml(location || "-")}</td>
-            <td>${escapeHtml(formatDate(item.firstSeen))}</td>
-            <td>${escapeHtml(formatDate(item.lastSeen))}</td>
-            <td>${escapeHtml(formatDuration(item.durationMs))}</td>
-            <td>${escapeHtml(String(item.eventCount || 0))}</td>
-            <td>${escapeHtml(item.latestPath || "-")}</td>
-          </tr>
-        `;
-      })
-      .join("");
-  }
-
-  function formatLocationSummary(item) {
-    if (!item || typeof item !== "object") {
-      return "-";
-    }
-
-    const explicit = String(item.locationSummary || "").trim();
-    if (explicit) {
-      return explicit;
-    }
-
-    const details = Array.isArray(item.ipDetails) ? item.ipDetails : [];
-    const locations = Array.from(
-      new Set(
-        details
-          .map((entry) => String((entry && entry.location) || "").trim())
-          .filter(Boolean)
-      )
+  function renderManager(payload) {
+    const repo = payload.repoStatus || {};
+    const health = payload.siteHealth || {};
+    const summary = payload.lastSecurityScanSummary || {};
+    text(manager.critical, num(summary.critical || 0));
+    text(manager.siteHealth, health.statusCode ? `${health.status} (${health.statusCode})` : health.status || "Unknown");
+    text(manager.repoPath, repo.path || state.settings?.opsManager?.managedRepoPath || "--");
+    text(manager.repoBranch, repo.branch || "--");
+    text(manager.repoRemote, repo.remoteUrl || "--");
+    text(manager.repoDirty, repo.isDirty ? "Yes" : "No");
+    text(manager.repoLastCommit, repo.lastCommit || "--");
+    text(manager.domainName, state.settings?.opsManager?.domainName || "--");
+    text(manager.domainProvider, state.settings?.opsManager?.domainProvider || "--");
+    text(manager.lastScan, date(payload.lastSecurityScanAt));
+    text(manager.siteCheck, health.checkedAt ? `${date(health.checkedAt)} | ${num(health.responseTimeMs)}ms` : "--");
+    text(
+      manager.scanSummary,
+      `critical ${num(summary.critical || 0)}, high ${num(summary.high || 0)}, fixed ${num(summary.fixed || 0)}, missing setup ${num(payload.readiness?.missingCount || 0)}`
     );
-    if (locations.length > 0) {
-      return locations.join(" | ");
-    }
-
-    const fallback = String(item.primaryLocation || "").trim();
-    return fallback || "-";
+    renderList(activityList, payload.recentActivity, (item) => `<strong>${esc(date(item.createdAt))}</strong> ${esc(item.message || "")}`);
+    renderList(
+      securityList,
+      payload.securityFindings,
+      (item) => `<strong>${esc(String(item.severity || "info").toUpperCase())}</strong> ${esc(item.title || "")}<br><span class="muted">${esc(item.target || "")} | ${esc(item.details || "")}</span>`
+    );
+    renderList(
+      manager.readinessList,
+      payload.readiness?.items,
+      (item) => `<strong>${esc(item.ready ? "READY" : "NEEDS VALUE")}</strong> ${esc(item.label || "")}<br><span class="muted">${esc(item.hint || "")}</span>`
+    );
   }
 
-  async function loadSupportRequests() {
-    if (!supportRequestsBody) {
+  function renderSupport() {
+    if (!state.support.length) {
+      supportBody.innerHTML = "<tr><td colspan='7' class='muted'>No support requests yet.</td></tr>";
       return;
     }
-
-    supportRequestsBody.innerHTML = "<tr><td colspan='8' class='muted'>Loading support inbox...</td></tr>";
-
-    const response = await fetch("/api/admin/support-requests", { credentials: "include" });
-    const payload = await response.json();
-
-    if (!response.ok || !payload.ok) {
-      supportRequestsBody.innerHTML = `<tr><td colspan='8' class='status error'>${escapeHtml(payload.error || "Failed to load support inbox.")}</td></tr>`;
-      return;
-    }
-
-    supportRequests = Array.isArray(payload.requests) ? payload.requests : [];
-    renderSupportRequests();
-  }
-
-  async function loadAccounts() {
-    if (!accountsBody) {
-      return;
-    }
-
-    setStatus(accountsStatus, "Refreshing accounts...", "");
-    accountsBody.innerHTML = "<tr><td colspan='6' class='muted'>Loading accounts...</td></tr>";
-
-    const response = await fetch("/api/admin/accounts", { credentials: "include" });
-    const payload = await response.json();
-
-    if (!response.ok || !payload.ok) {
-      accountsBody.innerHTML = `<tr><td colspan='6' class='status error'>${escapeHtml(payload.error || "Failed to load accounts.")}</td></tr>`;
-      setStatus(accountsStatus, payload.error || "Failed to load accounts.", "error");
-      return;
-    }
-
-    accounts = Array.isArray(payload.accounts) ? payload.accounts : [];
-    renderAccounts(accounts, payload.stats || {});
-    setStatus(accountsStatus, "Accounts updated.", "ok");
-  }
-
-  function renderAccounts(list, stats) {
-    if (accountStatTotal) {
-      accountStatTotal.textContent = String(stats.total || 0);
-    }
-    if (accountStatNew7d) {
-      accountStatNew7d.textContent = String(stats.createdLast7d || 0);
-    }
-    if (accountStatActive30d) {
-      accountStatActive30d.textContent = String(stats.activeLast30d || 0);
-    }
-
-    if (!accountsBody) {
-      return;
-    }
-
-    if (!Array.isArray(list) || list.length === 0) {
-      accountsBody.innerHTML = "<tr><td colspan='6' class='muted'>No accounts created yet.</td></tr>";
-      return;
-    }
-
-    accountsBody.innerHTML = list
-      .map((account) => {
-        return `
-          <tr>
-            <td>${escapeHtml(account.email || "-")}</td>
-            <td>${escapeHtml(account.name || "-")}</td>
-            <td>${escapeHtml(account.role || "customer")}</td>
-            <td>${escapeHtml(formatDate(account.createdAt))}</td>
-            <td>${escapeHtml(formatDate(account.lastLoginAt))}</td>
-            <td>${account.disabled ? "Disabled" : "Active"}</td>
-          </tr>
-        `;
-      })
-      .join("");
-  }
-
-  function renderSupportRequests() {
-    if (!supportRequestsBody) {
-      return;
-    }
-
-    if (!supportRequests.length) {
-      supportRequestsBody.innerHTML = "<tr><td colspan='8' class='muted'>No support requests yet.</td></tr>";
-      return;
-    }
-
-    supportRequestsBody.innerHTML = supportRequests
-      .map((item) => {
-        const createdAt = formatDate(item.createdAt);
-        return `
-          <tr data-request-id="${escapeHtml(item.id)}">
-            <td>${escapeHtml(createdAt)}</td>
-            <td>${escapeHtml(item.name || "")}</td>
-            <td>${item.email ? `<a href="mailto:${escapeHtml(item.email)}">${escapeHtml(item.email)}</a>` : "<span class='muted'>No email</span>"}</td>
-            <td>${escapeHtml(item.preferredTime || "-")}</td>
-            <td>${escapeHtml(item.issue || "")}</td>
-            <td>
-              <select data-field="status">
-                <option value="new" ${item.status === "new" ? "selected" : ""}>New</option>
-                <option value="in_progress" ${item.status === "in_progress" ? "selected" : ""}>In Progress</option>
-                <option value="closed" ${item.status === "closed" ? "selected" : ""}>Closed</option>
-              </select>
-            </td>
-            <td><textarea data-field="adminNotes" placeholder="Internal notes for follow-up">${escapeHtml(item.adminNotes || "")}</textarea></td>
-            <td>
-              <button class="btn btn-ghost" type="button" data-action="save-support-request">Save</button>
-              <p class="status" data-row-status></p>
-            </td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    supportRequestsBody.querySelectorAll("[data-action='save-support-request']").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const row = button.closest("tr");
-        await saveSupportRequestRow(row);
-      });
+    supportBody.innerHTML = state.support.map((item) => rowMarkup(item, "support")).join("");
+    supportBody.querySelectorAll("[data-save-kind='support']").forEach((button) => {
+      button.addEventListener("click", () => saveRow("support", button.closest("tr")));
     });
   }
 
-  async function saveSupportRequestRow(row) {
-    if (!row) {
+  function renderContact() {
+    if (!state.contact.length) {
+      contactBody.innerHTML = "<tr><td colspan='7' class='muted'>No contact messages yet.</td></tr>";
       return;
     }
+    contactBody.innerHTML = state.contact.map((item) => rowMarkup(item, "contact")).join("");
+    contactBody.querySelectorAll("[data-save-kind='contact']").forEach((button) => {
+      button.addEventListener("click", () => saveRow("contact", button.closest("tr")));
+    });
+  }
 
-    const requestId = row.dataset.requestId || "";
-    const status = row.querySelector("[data-field='status']")?.value || "new";
-    const adminNotes = row.querySelector("[data-field='adminNotes']")?.value || "";
-    const statusNode = row.querySelector("[data-row-status]");
+  function rowMarkup(item, kind) {
+    const detail = kind === "support" ? item.preferredTime || "--" : item.preferredContact || "email";
+    const subject = kind === "support" ? item.issue : item.subject;
+    return `
+      <tr data-row-id="${esc(item.id)}">
+        <td>${esc(date(item.createdAt))}</td>
+        <td>${esc(item.name || "Anonymous")}</td>
+        <td>${item.email ? `<a href="mailto:${esc(item.email)}">${esc(item.email)}</a>` : "<span class='muted'>No email</span>"}</td>
+        <td>${esc(detail)}</td>
+        <td>${esc(subject || "")}</td>
+        <td><select data-field="status">${statusOption("new", item.status)}${statusOption("in_progress", item.status)}${statusOption("waiting_on_owner", item.status)}${statusOption("closed", item.status)}</select></td>
+        <td><textarea data-field="adminNotes">${esc(item.adminNotes || "")}</textarea></td>
+        <td><button class="btn btn-ghost" type="button" data-save-kind="${kind}">Save</button><p class="status" data-row-status></p></td>
+      </tr>`;
+  }
+
+  async function saveRow(kind, row) {
+    const id = row?.dataset.rowId || "";
+    const status = row?.querySelector("[data-field='status']")?.value || "new";
+    const adminNotes = row?.querySelector("[data-field='adminNotes']")?.value || "";
+    const statusNode = row?.querySelector("[data-row-status]");
     setStatus(statusNode, "Saving...", "");
+    try {
+      const url = kind === "support" ? `/api/admin/support-requests/${encodeURIComponent(id)}` : `/api/admin/contact-messages/${encodeURIComponent(id)}`;
+      const payload = await api(url, { method: "PATCH", body: { status, adminNotes } });
+      if (kind === "support") {
+        state.support = state.support.map((item) => (item.id === id ? payload.request : item));
+      } else {
+        state.contact = state.contact.map((item) => (item.id === id ? payload.message : item));
+      }
+      setStatus(statusNode, "Saved.", "ok");
+    } catch (error) {
+      setStatus(statusNode, error.message || "Save failed.", "error");
+    }
+  }
 
-    const response = await fetch(`/api/admin/support-requests/${encodeURIComponent(requestId)}`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: {
-        ...buildCsrfHeaders(),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ status, adminNotes })
-    });
+  function applySettings() {
+    const s = state.settings || {};
+    const ops = s.opsManager || {};
+    const secrets = state.secrets || {};
+    setInputValue(form.brandName, s.brand?.name || "");
+    setInputValue(form.brandTagline, s.brand?.tagline || "");
+    setInputValue(form.heroTitle, s.brand?.heroTitle || "");
+    setInputValue(form.heroSubtitle, s.brand?.heroSubtitle || "");
+    setInputValue(form.accentHex, s.theme?.accentHex || "#ff2ea6");
+    setInputValue(form.stripeStarter, s.stripeLinks?.starter || "");
+    setInputValue(form.stripePro, s.stripeLinks?.pro || "");
+    setInputValue(form.stripeReset, s.stripeLinks?.reset || "");
+    setInputValue(form.supportEmail, s.support?.supportEmail || "");
+    setInputValue(form.anydeskSourceUrl, s.support?.anydeskSourceUrl || "");
+    setInputValue(form.refreshIntervalHours, String(s.support?.refreshIntervalHours || 12));
+    setInputValue(form.supportIntro, s.support?.intro || "");
+    setInputChecked(form.customTrackingEnabled, s.analytics?.customTrackingEnabled !== false);
+    setInputValue(form.opsGithubRepo, ops.githubRepo || "");
+    setInputValue(form.opsDefaultBranch, ops.defaultBranch || "");
+    setInputValue(form.opsManagedRepoPath, ops.managedRepoPath || "");
+    setInputValue(form.opsDomainName, ops.domainName || "");
+    setInputValue(form.opsApiSubdomain, ops.apiSubdomain || "");
+    setInputValue(form.opsOpsSubdomain, ops.opsSubdomain || "");
+    setInputValue(form.opsDomainProvider, ops.domainProvider || "");
+    setInputValue(form.opsDnsNotes, ops.dnsNotes || "");
+    setInputValue(form.opsAlertEmail, ops.alertEmail || "");
+    setInputValue(form.opsSecurityScanIntervalMinutes, String(ops.securityScanIntervalMinutes || 60));
+    setInputValue(form.opsCriticalReminderMinutes, String(ops.criticalReminderMinutes || 15));
+    setInputValue(form.opsNormalReminderMinutes, String(ops.normalReminderMinutes || 60));
+    setInputValue(form.opsOperatorBaseUrl, ops.operatorBaseUrl || "");
+    setInputValue(form.opsOperatorModel, ops.operatorModel || "");
+    setInputChecked(form.opsAutoFixCritical, ops.autoFixCritical !== false);
+    setInputChecked(form.opsNativeWindowsNotifications, ops.nativeWindowsNotifications !== false);
+    setInputChecked(form.opsBrowserNotifications, ops.browserNotifications !== false);
+    setInputChecked(form.opsCloudflareEnabled, ops.cloudflareEnabled !== false);
+    setInputChecked(form.opsLocalOwnerConsoleEnabled, ops.localOwnerConsoleEnabled !== false);
+    setInputChecked(form.opsSensitiveTextApprovalsRequireCode, ops.sensitiveTextApprovalsRequireCode !== false);
+    setInputChecked(form.opsOperatorFullAccess, ops.operatorFullAccess !== false);
+    setInputValue(form.opsOperatorSystemPrompt, ops.operatorSystemPrompt || "");
+    setInputValue(form.protonDriveLogPath, secrets.protonDriveLogPath || "");
+    setInputValue(form.gaMeasurementId, secrets.gaMeasurementId || "");
+    setInputValue(form.metaPixelId, secrets.metaPixelId || "");
+    setInputValue(form.customWebhookUrl, secrets.customWebhookUrl || "");
+    setInputValue(form.discordRemodelCode, secrets.discordRemodelCode || "");
+    setInputValue(form.discordRemodelDiscountPercent, String(secrets.discordRemodelDiscountPercent || 40));
+    setInputValue(form.twilioAccountSid, secrets.twilio?.accountSid || "");
+    setInputValue(form.twilioAuthToken, secrets.twilio?.authToken || "");
+    setInputValue(form.twilioPhoneNumber, secrets.twilio?.phoneNumber || "");
+    setInputValue(form.twilioOwnerPhone, secrets.twilio?.ownerPhone || "");
+    setInputValue(form.protonSmtpHost, secrets.protonSmtp?.host || "");
+    setInputValue(form.protonSmtpPort, String(secrets.protonSmtp?.port || 587));
+    setInputValue(form.protonSmtpUsername, secrets.protonSmtp?.username || "");
+    setInputValue(form.protonSmtpPassword, secrets.protonSmtp?.password || "");
+    setInputValue(form.protonFromEmail, secrets.protonSmtp?.fromEmail || "");
+    setInputValue(form.ociSshHost, secrets.oci?.sshHost || "");
+    setInputValue(form.ociSshUser, secrets.oci?.sshUser || "ubuntu");
+    setInputValue(form.ociSshKeyPath, secrets.oci?.sshKeyPath || "");
+    setInputValue(form.ociBackupMountPath, secrets.oci?.backupMountPath || "");
+    setInputValue(form.cloudflareApiToken, secrets.cloudflare?.apiToken || "");
+    setInputValue(form.cloudflareZoneId, secrets.cloudflare?.zoneId || "");
+    setInputValue(form.cloudflareAccountEmail, secrets.cloudflare?.accountEmail || "");
+    setInputValue(form.ownerTextApprovalSecret, secrets.ownerApproval?.textApprovalSecret || "");
+    setInputValue(form.apiKeyOpenai, secrets.apiKeys?.openai || "");
+    setInputValue(form.apiKeyDiscord, secrets.apiKeys?.discord || "");
+    setInputValue(form.apiKeyStripeSecret, secrets.apiKeys?.stripeSecret || "");
+    renderRows(couponsBody, s.coupons || [], couponRow);
+    renderRows(productsBody, s.products || [], productRow);
+  }
 
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      setStatus(statusNode, payload.error || "Failed to save request.", "error");
+  async function onSaveSettings() {
+    if (!state.settings || !state.secrets) {
+      setStatus(saveStatus, "No settings loaded.", "error");
       return;
     }
-
-    supportRequests = supportRequests.map((item) => (item.id === requestId ? payload.request : item));
-    setStatus(statusNode, "Saved", "ok");
-    await loadDashboardStats();
-  }
-
-  async function loadAdminData() {
-    const response = await fetch("/api/admin/settings", { credentials: "include" });
-    const payload = await response.json();
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "Failed to load admin settings.");
-    }
-
-    currentSettings = payload.settings;
-    currentSecrets = payload.secrets;
-
-    applyToForm(currentSettings, currentSecrets);
-  }
-
-  function applyToForm(settings, secrets) {
-    formRefs.brandName.value = settings.brand.name || "";
-    formRefs.brandTagline.value = settings.brand.tagline || "";
-    formRefs.heroTitle.value = settings.brand.heroTitle || "";
-    formRefs.heroSubtitle.value = settings.brand.heroSubtitle || "";
-    formRefs.accentHex.value = settings.theme.accentHex || "#ff2ea6";
-
-    formRefs.stripeStarter.value = settings.stripeLinks.starter || "";
-    formRefs.stripePro.value = settings.stripeLinks.pro || "";
-    formRefs.stripeReset.value = settings.stripeLinks.reset || "";
-
-    formRefs.supportEmail.value = settings.support.supportEmail || "";
-    formRefs.anydeskSourceUrl.value = settings.support.anydeskSourceUrl || "";
-    formRefs.refreshIntervalHours.value = String(settings.support.refreshIntervalHours || 12);
-    formRefs.supportIntro.value = settings.support.intro || "";
-
-    formRefs.customTrackingEnabled.checked = settings.analytics.customTrackingEnabled !== false;
-
-    formRefs.protonDriveLogPath.value = secrets.protonDriveLogPath || "";
-    formRefs.gaMeasurementId.value = secrets.gaMeasurementId || "";
-    formRefs.metaPixelId.value = secrets.metaPixelId || "";
-    formRefs.customWebhookUrl.value = secrets.customWebhookUrl || "";
-    formRefs.apiKeyOpenai.value = (secrets.apiKeys && secrets.apiKeys.openai) || "";
-    formRefs.apiKeyDiscord.value = (secrets.apiKeys && secrets.apiKeys.discord) || "";
-    formRefs.apiKeyStripeSecret.value = (secrets.apiKeys && secrets.apiKeys.stripeSecret) || "";
-    formRefs.discordRemodelCode.value = secrets.discordRemodelCode || "";
-    formRefs.discordRemodelDiscountPercent.value = String(secrets.discordRemodelDiscountPercent || 40);
-
-    renderCouponRows(settings.coupons || []);
-    renderProductRows(settings.products || []);
-  }
-
-  function renderCouponRows(coupons) {
-    if (!couponTableBody) {
-      return;
-    }
-
-    couponTableBody.innerHTML = "";
-    coupons.forEach((coupon) => {
-      couponTableBody.appendChild(buildCouponRow(coupon));
-    });
-
-    if (!coupons.length) {
-      addCouponRow();
-    }
-  }
-
-  function buildCouponRow(coupon = {}) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input data-key="code" value="${escapeHtml(String(coupon.code || "").toUpperCase())}" placeholder="SHEETZFAM"></td>
-      <td><input data-key="percentOff" value="${escapeHtml(String(coupon.percentOff || ""))}" type="number" min="1" max="100" step="1" placeholder="50"></td>
-      <td><label><input type="checkbox" data-key="active" ${coupon.active !== false ? "checked" : ""}>Active</label></td>
-      <td><button type="button" class="btn btn-ghost" data-remove>Remove</button></td>
-    `;
-    tr.querySelector("[data-remove]").addEventListener("click", () => {
-      tr.remove();
-    });
-    return tr;
-  }
-
-  function addCouponRow() {
-    if (!couponTableBody) {
-      return;
-    }
-    couponTableBody.appendChild(buildCouponRow());
-  }
-
-  function renderProductRows(products) {
-    productTableBody.innerHTML = "";
-
-    products.forEach((product) => {
-      productTableBody.appendChild(buildProductRow(product));
-    });
-
-    if (products.length === 0) {
-      addProductRow();
-    }
-  }
-
-  function buildProductRow(product = {}) {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><input data-key="id" value="${escapeHtml(product.id || "")}" placeholder="id"></td>
-      <td><input data-key="title" value="${escapeHtml(product.title || "")}" placeholder="title"></td>
-      <td><input data-key="category" value="${escapeHtml(product.category || "Programs")}" placeholder="category"></td>
-      <td><input data-key="priceLabel" value="${escapeHtml(product.priceLabel || "")}" placeholder="price"></td>
-      <td><input data-key="priceCents" value="${escapeHtml(String(product.priceCents || ""))}" type="number" min="0" step="1" placeholder="9900"></td>
-      <td><input data-key="ctaLabel" value="${escapeHtml(product.ctaLabel || "Learn More")}" placeholder="CTA"></td>
-      <td><input data-key="ctaUrl" value="${escapeHtml(product.ctaUrl || "#")}" placeholder="URL"></td>
-      <td><label><input type="checkbox" data-key="requires18Plus" ${product.requires18Plus ? "checked" : ""}>18+</label></td>
-      <td><button type="button" class="btn btn-ghost" data-remove>Remove</button></td>
-      <td><textarea data-key="summary" placeholder="summary">${escapeHtml(product.summary || "")}</textarea></td>
-    `;
-
-    tr.querySelector("[data-remove]").addEventListener("click", () => {
-      tr.remove();
-    });
-
-    return tr;
-  }
-
-  function addProductRow() {
-    productTableBody.appendChild(buildProductRow());
-  }
-
-  async function onSave() {
-    if (!currentSettings || !currentSecrets) {
-      setStatus(saveStatus, "No data loaded.", "error");
-      return;
-    }
-
-    const nextSettings = {
-      ...currentSettings,
+    const settings = {
+      ...state.settings,
       brand: {
-        name: formRefs.brandName.value,
-        tagline: formRefs.brandTagline.value,
-        heroTitle: formRefs.heroTitle.value,
-        heroSubtitle: formRefs.heroSubtitle.value
+        name: form.brandName.value,
+        tagline: form.brandTagline.value,
+        heroTitle: form.heroTitle.value,
+        heroSubtitle: form.heroSubtitle.value
       },
-      theme: {
-        accentHex: formRefs.accentHex.value || "#ff2ea6"
-      },
+      theme: { accentHex: form.accentHex.value },
       stripeLinks: {
-        starter: formRefs.stripeStarter.value,
-        pro: formRefs.stripePro.value,
-        reset: formRefs.stripeReset.value
+        starter: fieldValue(form.stripeStarter),
+        pro: fieldValue(form.stripePro),
+        reset: fieldValue(form.stripeReset)
       },
       support: {
-        ...currentSettings.support,
-        supportEmail: formRefs.supportEmail.value,
-        anydeskSourceUrl: formRefs.anydeskSourceUrl.value,
-        refreshIntervalHours: Number(formRefs.refreshIntervalHours.value || 12),
-        intro: formRefs.supportIntro.value
+        ...state.settings.support,
+        supportEmail: form.supportEmail.value,
+        anydeskSourceUrl: form.anydeskSourceUrl.value,
+        refreshIntervalHours: Number(form.refreshIntervalHours.value || 12),
+        intro: form.supportIntro.value
       },
-      analytics: {
-        customTrackingEnabled: formRefs.customTrackingEnabled.checked
+      analytics: { customTrackingEnabled: form.customTrackingEnabled.checked },
+      opsManager: {
+        enabled: true,
+        githubRepo: fieldValue(form.opsGithubRepo),
+        defaultBranch: fieldValue(form.opsDefaultBranch),
+        managedRepoPath: fieldValue(form.opsManagedRepoPath),
+        domainName: fieldValue(form.opsDomainName),
+        apiSubdomain: fieldValue(form.opsApiSubdomain),
+        opsSubdomain: fieldValue(form.opsOpsSubdomain),
+        domainProvider: fieldValue(form.opsDomainProvider),
+        dnsNotes: fieldValue(form.opsDnsNotes),
+        alertEmail: fieldValue(form.opsAlertEmail),
+        securityScanIntervalMinutes: fieldNumber(form.opsSecurityScanIntervalMinutes, 60),
+        criticalReminderMinutes: fieldNumber(form.opsCriticalReminderMinutes, 15),
+        normalReminderMinutes: fieldNumber(form.opsNormalReminderMinutes, 60),
+        operatorBaseUrl: fieldValue(form.opsOperatorBaseUrl),
+        operatorModel: fieldValue(form.opsOperatorModel),
+        autoFixCritical: fieldChecked(form.opsAutoFixCritical, true),
+        nativeWindowsNotifications: fieldChecked(form.opsNativeWindowsNotifications, true),
+        browserNotifications: fieldChecked(form.opsBrowserNotifications, true),
+        cloudflareEnabled: fieldChecked(form.opsCloudflareEnabled, true),
+        localOwnerConsoleEnabled: fieldChecked(form.opsLocalOwnerConsoleEnabled, true),
+        sensitiveTextApprovalsRequireCode: fieldChecked(form.opsSensitiveTextApprovalsRequireCode, true),
+        operatorFullAccess: fieldChecked(form.opsOperatorFullAccess, true),
+        operatorSystemPrompt: fieldValue(form.opsOperatorSystemPrompt)
       },
       coupons: collectCoupons(),
       products: collectProducts()
     };
-
-    const nextSecrets = {
-      ...currentSecrets,
-      protonDriveLogPath: formRefs.protonDriveLogPath.value,
-      gaMeasurementId: formRefs.gaMeasurementId.value,
-      metaPixelId: formRefs.metaPixelId.value,
-      customWebhookUrl: formRefs.customWebhookUrl.value,
-      discordRemodelCode: formRefs.discordRemodelCode.value,
-      discordRemodelDiscountPercent: Number(formRefs.discordRemodelDiscountPercent.value || 40),
+    const secrets = {
+      ...state.secrets,
+      protonDriveLogPath: fieldValue(form.protonDriveLogPath),
+      gaMeasurementId: fieldValue(form.gaMeasurementId),
+      metaPixelId: fieldValue(form.metaPixelId),
+      customWebhookUrl: fieldValue(form.customWebhookUrl),
+      discordRemodelCode: fieldValue(form.discordRemodelCode),
+      discordRemodelDiscountPercent: fieldNumber(form.discordRemodelDiscountPercent, 40),
+      twilio: {
+        accountSid: fieldValue(form.twilioAccountSid),
+        authToken: fieldValue(form.twilioAuthToken),
+        phoneNumber: fieldValue(form.twilioPhoneNumber),
+        ownerPhone: fieldValue(form.twilioOwnerPhone)
+      },
+      protonSmtp: {
+        host: fieldValue(form.protonSmtpHost),
+        port: fieldNumber(form.protonSmtpPort, 587),
+        username: fieldValue(form.protonSmtpUsername),
+        password: fieldValue(form.protonSmtpPassword),
+        fromEmail: fieldValue(form.protonFromEmail)
+      },
+      oci: {
+        sshHost: fieldValue(form.ociSshHost),
+        sshUser: fieldValue(form.ociSshUser),
+        sshKeyPath: fieldValue(form.ociSshKeyPath),
+        backupMountPath: fieldValue(form.ociBackupMountPath)
+      },
+      cloudflare: {
+        apiToken: fieldValue(form.cloudflareApiToken),
+        zoneId: fieldValue(form.cloudflareZoneId),
+        accountEmail: fieldValue(form.cloudflareAccountEmail)
+      },
+      ownerApproval: {
+        textApprovalSecret: fieldValue(form.ownerTextApprovalSecret)
+      },
       apiKeys: {
-        openai: formRefs.apiKeyOpenai.value,
-        discord: formRefs.apiKeyDiscord.value,
-        stripeSecret: formRefs.apiKeyStripeSecret.value
+        openai: fieldValue(form.apiKeyOpenai),
+        discord: fieldValue(form.apiKeyDiscord),
+        stripeSecret: fieldValue(form.apiKeyStripeSecret)
       }
     };
-
-    setStatus(saveStatus, "Saving...", "");
-
-    const response = await fetch("/api/admin/settings", {
-      method: "PUT",
-      credentials: "include",
-      headers: {
-        ...buildCsrfHeaders(),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ settings: nextSettings, secrets: nextSecrets })
-    });
-
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      setStatus(saveStatus, payload.error || "Save failed.", "error");
-      return;
+    setStatus(saveStatus, "Saving settings...", "");
+    try {
+      await api("/api/admin/settings", { method: "PUT", body: { settings, secrets } });
+      state.settings = settings;
+      state.secrets = secrets;
+      setStatus(saveStatus, "Settings saved.", "ok");
+    } catch (error) {
+      setStatus(saveStatus, error.message || "Save failed.", "error");
     }
-
-    currentSettings = nextSettings;
-    currentSecrets = nextSecrets;
-    setStatus(saveStatus, "Saved successfully.", "ok");
   }
 
   async function onRefreshAnydesk() {
-    setStatus(saveStatus, "Refreshing AnyDesk link...", "");
+    setStatus(saveStatus, "Refreshing AnyDesk...", "");
+    try {
+      const payload = await api("/api/admin/refresh-anydesk", { method: "POST" });
+      setStatus(saveStatus, `AnyDesk refreshed: ${payload.resolvedUrl || "ok"}`, "ok");
+    } catch (error) {
+      setStatus(saveStatus, error.message || "AnyDesk refresh failed.", "error");
+    }
+  }
 
-    const response = await fetch("/api/admin/refresh-anydesk", {
-      method: "POST",
-      credentials: "include",
-      headers: buildCsrfHeaders()
-    });
+  async function onManualSecurityScan() {
+    setStatus(dashboardStatus, "Running security scan...", "");
+    try {
+      await api("/api/admin/manager/security-scan", { method: "POST" });
+      await loadDashboard();
+    } catch (error) {
+      setStatus(dashboardStatus, error.message || "Security scan failed.", "error");
+    }
+  }
 
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      setStatus(saveStatus, payload.error || "AnyDesk refresh failed.", "error");
+  async function runOperator(mode) {
+    const prompt = String(operatorPrompt?.value || "").trim();
+    if (!prompt) {
+      setStatus(operatorStatus, "Enter an instruction first.", "error");
       return;
     }
+    setStatus(operatorStatus, mode === "apply" ? "Applying changes..." : "Running operator...", "");
+    try {
+      const payload = await api(mode === "apply" ? "/api/admin/operator/apply" : "/api/admin/operator/ask", {
+        method: "POST",
+        body: { prompt }
+      });
+      operatorOutput.textContent = JSON.stringify(payload, null, 2);
+      setStatus(operatorStatus, mode === "apply" ? `Applied ${(payload.applied || []).length} file change(s).` : "Operator response received.", "ok");
+      await loadDashboard();
+    } catch (error) {
+      setStatus(operatorStatus, error.message || "Operator request failed.", "error");
+    }
+  }
 
-    setStatus(saveStatus, `AnyDesk refreshed: ${payload.resolvedUrl}`, "ok");
+  function renderRows(body, items, build) {
+    body.innerHTML = "";
+    items.forEach((item) => body.appendChild(build(item)));
+    if (!items.length) {
+      body.appendChild(build());
+    }
+  }
+
+  function productRow(item = {}) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><input data-key="id" value="${esc(item.id || "")}"></td><td><input data-key="title" value="${esc(item.title || "")}"></td><td><input data-key="category" value="${esc(item.category || "Programs")}"></td><td><input data-key="priceLabel" value="${esc(item.priceLabel || "")}"></td><td><input data-key="priceCents" type="number" value="${esc(String(item.priceCents || ""))}"></td><td><input data-key="ctaLabel" value="${esc(item.ctaLabel || "")}"></td><td><input data-key="ctaUrl" value="${esc(item.ctaUrl || "")}"></td><td><label><input data-key="requires18Plus" type="checkbox" ${item.requires18Plus ? "checked" : ""}>18+</label></td><td><button class="btn btn-ghost" type="button" data-remove-row>Remove</button></td><td><textarea data-key="summary">${esc(item.summary || "")}</textarea></td>`;
+    tr.querySelector("[data-remove-row]")?.addEventListener("click", () => tr.remove());
+    return tr;
+  }
+
+  function couponRow(item = {}) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><input data-key="code" value="${esc(String(item.code || "").toUpperCase())}"></td><td><input data-key="percentOff" type="number" min="1" max="100" value="${esc(String(item.percentOff || ""))}"></td><td><label><input data-key="active" type="checkbox" ${item.active !== false ? "checked" : ""}>Active</label></td><td><button class="btn btn-ghost" type="button" data-remove-row>Remove</button></td>`;
+    tr.querySelector("[data-remove-row]")?.addEventListener("click", () => tr.remove());
+    return tr;
   }
 
   function collectProducts() {
-    const rows = Array.from(productTableBody.querySelectorAll("tr"));
-    return rows
-      .map((row) => {
-        const get = (key) => {
-          const input = row.querySelector(`[data-key='${key}']`);
-          return input ? input.value : "";
-        };
-        const requires18Plus = row.querySelector("[data-key='requires18Plus']")?.checked || false;
-
-        return {
-          id: get("id"),
-          title: get("title"),
-          category: get("category"),
-          summary: get("summary"),
-          priceLabel: get("priceLabel"),
-          priceCents: Number(get("priceCents") || 0),
-          ctaLabel: get("ctaLabel"),
-          ctaUrl: get("ctaUrl"),
-          requires18Plus
-        };
-      })
-      .filter((item) => item.id.trim().length > 0 && item.title.trim().length > 0);
+    return Array.from(productsBody.querySelectorAll("tr")).map((row) => ({
+      id: val(row, "id"),
+      title: val(row, "title"),
+      category: val(row, "category"),
+      priceLabel: val(row, "priceLabel"),
+      priceCents: Number(val(row, "priceCents") || 0),
+      ctaLabel: val(row, "ctaLabel"),
+      ctaUrl: val(row, "ctaUrl"),
+      requires18Plus: row.querySelector("[data-key='requires18Plus']")?.checked || false,
+      summary: val(row, "summary")
+    })).filter((item) => item.id.trim() && item.title.trim());
   }
 
   function collectCoupons() {
-    if (!couponTableBody) {
-      return [];
-    }
+    return Array.from(couponsBody.querySelectorAll("tr")).map((row) => ({
+      code: String(val(row, "code")).trim().toUpperCase(),
+      percentOff: Number(val(row, "percentOff") || 0),
+      active: row.querySelector("[data-key='active']")?.checked !== false
+    })).filter((item) => item.code && item.percentOff > 0);
+  }
 
-    const rows = Array.from(couponTableBody.querySelectorAll("tr"));
-    return rows
-      .map((row) => {
-        const get = (key) => {
-          const input = row.querySelector(`[data-key='${key}']`);
-          return input ? input.value : "";
-        };
-        const active = row.querySelector("[data-key='active']")?.checked !== false;
-        return {
-          code: String(get("code") || "").trim().toUpperCase(),
-          percentOff: Number(get("percentOff") || 0),
-          active
-        };
-      })
-      .filter((item) => item.code.length > 0 && Number(item.percentOff || 0) > 0);
+  function val(row, key) {
+    return row.querySelector(`[data-key='${key}']`)?.value || "";
+  }
+
+  async function maybeRequestNotifications() {
+    if (!state.settings?.opsManager?.browserNotifications || !("Notification" in window)) {
+      return;
+    }
+    if (Notification.permission === "default") {
+      try {
+        await Notification.requestPermission();
+      } catch {}
+    }
+  }
+
+  function notifyNew(kind, items) {
+    const seen = kind === "support" ? state.supportSeen : state.contactSeen;
+    if (seen.size === 0) {
+      items.forEach((item) => item.id && seen.add(item.id));
+      return;
+    }
+    const enabled = state.settings?.opsManager?.browserNotifications && "Notification" in window && Notification.permission === "granted";
+    items.forEach((item) => {
+      if (!item.id || seen.has(item.id)) {
+        return;
+      }
+      seen.add(item.id);
+      if (enabled) {
+        const detail = (kind === "support" ? item.issue : item.subject) || "New item received.";
+        new Notification(kind === "support" ? "New Support Request" : "New Contact Message", {
+          body: `${item.name || item.email || "Unknown"}: ${detail.slice(0, 120)}`
+        });
+      }
+    });
+  }
+
+  function startPolling() {
+    stopPolling();
+    state.pollId = window.setInterval(() => {
+      loadDashboard().catch(() => {});
+    }, 20000);
+  }
+
+  function stopPolling() {
+    if (state.pollId) {
+      window.clearInterval(state.pollId);
+      state.pollId = null;
+    }
+  }
+
+  async function api(url, options = {}) {
+    const method = options.method || "GET";
+    const headers = { ...(options.headers || {}) };
+    if (method !== "GET" && options.includeCsrf !== false && state.csrfToken) {
+      headers["x-csrf-token"] = state.csrfToken;
+    }
+    let body;
+    if (options.body !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(options.body);
+    }
+    const response = await fetch(url, { method, credentials: "include", headers, body });
+    const payload = await response.json().catch(() => ({ ok: false, error: "Invalid API response." }));
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `Request failed: ${method} ${url}`);
+    }
+    return payload;
+  }
+
+  function renderList(node, items, render) {
+    if (!node) {
+      return;
+    }
+    if (!Array.isArray(items) || !items.length) {
+      node.innerHTML = "<li class='muted'>No data yet.</li>";
+      return;
+    }
+    node.innerHTML = items.slice(0, 20).map((item) => `<li>${render(item)}</li>`).join("");
+  }
+
+  function setView(view) {
+    tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.adminTab === view));
+    views.forEach((section) => section.classList.toggle("hidden", section.dataset.adminView !== view));
+  }
+
+  function showLogin() {
+    loginPane?.classList.remove("hidden");
+    contentPane?.classList.add("hidden");
+  }
+
+  function showContent() {
+    loginPane?.classList.add("hidden");
+    contentPane?.classList.remove("hidden");
   }
 
   function setStatus(node, message, type) {
     if (!node) {
       return;
     }
-
     node.textContent = message;
     node.className = `status ${type || ""}`;
   }
 
-  function showLogin() {
-    loginPane.classList.remove("hidden");
-    contentPane.classList.add("hidden");
-  }
-
-  function showContent() {
-    loginPane.classList.add("hidden");
-    contentPane.classList.remove("hidden");
-  }
-
-  function setAdminView(viewName) {
-    const showDashboard = viewName !== "settings";
-    if (dashboardView) {
-      dashboardView.classList.toggle("hidden", !showDashboard);
-    }
-    if (settingsView) {
-      settingsView.classList.toggle("hidden", showDashboard);
-    }
-    if (dashboardTabButton) {
-      dashboardTabButton.classList.toggle("active", showDashboard);
-    }
-    if (settingsTabButton) {
-      settingsTabButton.classList.toggle("active", !showDashboard);
+  function text(node, value) {
+    if (node) {
+      node.textContent = String(value ?? "");
     }
   }
 
-  function startAdminClock() {
-    if (!adminClockNode) {
-      return;
-    }
-
-    const updateClock = () => {
-      adminClockNode.textContent = new Date().toLocaleTimeString();
-    };
-
-    updateClock();
-    window.setInterval(updateClock, 1000);
+  function statusOption(value, selectedValue) {
+    const labels = { new: "New", in_progress: "In Progress", waiting_on_owner: "Waiting On Owner", closed: "Closed" };
+    return `<option value="${value}" ${value === selectedValue ? "selected" : ""}>${labels[value] || value}</option>`;
   }
 
-  function buildCsrfHeaders() {
-    return csrfToken ? { "x-csrf-token": csrfToken } : {};
+  function setInputValue(node, value) {
+    if (node) {
+      node.value = String(value ?? "");
+    }
   }
 
-  function formatDate(value) {
-    const parsed = new Date(value || "");
-    if (Number.isNaN(parsed.getTime())) {
-      return "Unknown";
+  function setInputChecked(node, value) {
+    if (node) {
+      node.checked = Boolean(value);
     }
-    return parsed.toLocaleString();
   }
 
-  function formatDuration(valueMs) {
-    const totalMs = Number(valueMs || 0);
-    if (!Number.isFinite(totalMs) || totalMs <= 0) {
-      return "0s";
-    }
-
-    const totalSeconds = Math.floor(totalMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    }
-    return `${seconds}s`;
+  function fieldValue(node, fallback = "") {
+    return node ? node.value : fallback;
   }
 
-  function escapeHtml(value) {
-    return String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
+  function fieldNumber(node, fallback = 0) {
+    const numeric = Number(fieldValue(node, fallback));
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function fieldChecked(node, fallback = false) {
+    return node ? node.checked : fallback;
+  }
+
+  function date(value) {
+    if (!value) {
+      return "--";
+    }
+    const parsed = new Date(value);
+    return Number.isFinite(parsed.getTime()) ? parsed.toLocaleString() : "--";
+  }
+
+  function num(value) {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric.toLocaleString() : "0";
+  }
+
+  function esc(value) {
+    return String(value || "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
   }
 })();

@@ -5,3 +5,8 @@ logs/
 data/secrets.json
 data/accounts.json
 data/admins.json
+data/support-requests.json
+data/contact-messages.json
+data/forum-topics.json
+ops/.env.oci
+data/operator-backups/

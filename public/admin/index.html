@@ -136,10 +136,70 @@
             </div>
             <div class="inline-actions">
               <button class="btn" type="button" data-claim-owner-browser>Label This Browser As Me</button>
-              <button class="btn btn-ghost" type="button" data-refresh-stats>Refresh Stats</button>
+              <button class="btn btn-ghost" type="button" data-refresh-dashboard>Refresh Stats</button>
             </div>
             <p class="status" data-owner-claim-status></p>
             <p class="status" data-stats-status></p>
+          </article>
+
+          <article class="card">
+            <h2>Website Manager Bot</h2>
+            <p class="muted">Local owner console + OCI-ready backend checklist for forms, alerts, operator drafts, and deployment setup.</p>
+            <div class="grid three">
+              <div class="card">
+                <p class="eyebrow">Critical Findings</p>
+                <h3 data-manager-critical>0</h3>
+                <p class="muted">Current critical issues from the latest scan</p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Site Health</p>
+                <h3 data-manager-site-health>Unknown</h3>
+                <p class="muted">Latest live domain check</p>
+              </div>
+              <div class="card">
+                <p class="eyebrow">Last Scan</p>
+                <h3 data-manager-last-scan>--</h3>
+                <p class="muted">Most recent manager security pass</p>
+              </div>
+            </div>
+            <div class="grid two">
+              <div class="card">
+                <h3>Repo + Domain</h3>
+                <ul class="list">
+                  <li><strong>Repo Path:</strong> <span data-repo-path>--</span></li>
+                  <li><strong>Branch:</strong> <span data-repo-branch>--</span></li>
+                  <li><strong>Remote:</strong> <span data-repo-remote>--</span></li>
+                  <li><strong>Dirty:</strong> <span data-repo-dirty>--</span></li>
+                  <li><strong>Last Commit:</strong> <span data-repo-last-commit>--</span></li>
+                  <li><strong>Domain:</strong> <span data-domain-name>--</span></li>
+                  <li><strong>Provider:</strong> <span data-domain-provider>--</span></li>
+                  <li><strong>Live Check:</strong> <span data-manager-site-check>--</span></li>
+                  <li><strong>Scan Summary:</strong> <span data-manager-scan-summary>--</span></li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Phase One Fill-Later Checklist</h3>
+                <ul class="list" data-phase-one-readiness>
+                  <li class="muted">Waiting for manager status.</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Manager Activity</h3>
+                <ul class="list" data-manager-activity>
+                  <li class="muted">No manager activity yet.</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>Security Findings</h3>
+                <ul class="list" data-security-findings>
+                  <li class="muted">No findings yet.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="button" data-manual-security-scan>Run Security Scan Now</button>
+            </div>
+            <p class="status" data-dashboard-status></p>
           </article>
 
           <article class="card">
@@ -259,6 +319,43 @@
               <button class="btn btn-ghost" type="button" data-refresh-support-requests>Refresh Inbox</button>
             </div>
           </article>
+
+          <article class="card">
+            <h2>Contact Inbox</h2>
+            <p class="muted">Messages sent from the contact page land here instead of disappearing into a broken endpoint.</p>
+            <div class="table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>Created</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Preferred Contact</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Admin Notes</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody data-contact-messages-body></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Operator Console</h2>
+            <p class="muted">Draft changes first. Apply only after you approve. Full access is still scoped to the managed repo path.</p>
+            <div class="field">
+              <label>Instruction</label>
+              <textarea data-operator-prompt rows="8" placeholder="Example: draft a cleanup plan for the support page, then wait for approval before changing files."></textarea>
+            </div>
+            <div class="inline-actions">
+              <button class="btn" type="button" data-operator-plan>Draft Plan</button>
+              <button class="btn btn-ghost" type="button" data-operator-apply>Apply Approved Plan</button>
+            </div>
+            <p class="status" data-operator-status></p>
+            <pre data-operator-output class="muted">No operator output yet.</pre>
+          </article>
         </section>
 
         <section class="admin-view hidden" data-admin-view="settings">
@@ -335,6 +432,90 @@
           </article>
 
           <article class="card">
+            <h2>Ops Manager</h2>
+            <p class="muted">These settings describe the split setup you approved: GitHub Pages for the public site, OCI for dynamic features, and this PC as the owner console.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label>GitHub Repo</label>
+                <input name="opsGithubRepo" placeholder="SlendermanHG/slendystuff.com">
+              </div>
+              <div class="field">
+                <label>Default Branch</label>
+                <input name="opsDefaultBranch" placeholder="main">
+              </div>
+            </div>
+            <div class="field">
+              <label>Managed Repo Path On This PC</label>
+              <input name="opsManagedRepoPath" placeholder="C:\Slendystuff\managed-site">
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Primary Domain</label>
+                <input name="opsDomainName" placeholder="slendystuff.com">
+              </div>
+              <div class="field">
+                <label>Domain Provider</label>
+                <input name="opsDomainProvider" placeholder="Squarespace">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>API Subdomain</label>
+                <input name="opsApiSubdomain" placeholder="api.slendystuff.com">
+              </div>
+              <div class="field">
+                <label>Ops Subdomain</label>
+                <input name="opsOpsSubdomain" placeholder="ops.slendystuff.com">
+              </div>
+            </div>
+            <div class="field">
+              <label>Alert Email</label>
+              <input name="opsAlertEmail" placeholder="SiteAdmin@slendystuff.com">
+            </div>
+            <div class="field">
+              <label>DNS Notes</label>
+              <textarea name="opsDnsNotes"></textarea>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Security Scan Interval (minutes)</label>
+                <input name="opsSecurityScanIntervalMinutes" type="number" min="5">
+              </div>
+              <div class="field">
+                <label>Critical Reminder Delay (minutes)</label>
+                <input name="opsCriticalReminderMinutes" type="number" min="5">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Normal Reminder Delay (minutes)</label>
+                <input name="opsNormalReminderMinutes" type="number" min="15">
+              </div>
+              <div class="field">
+                <label>Operator Base URL</label>
+                <input name="opsOperatorBaseUrl" placeholder="https://api.openai.com/v1">
+              </div>
+            </div>
+            <div class="field">
+              <label>Operator Model</label>
+              <input name="opsOperatorModel" placeholder="gpt-5">
+            </div>
+            <div class="field">
+              <label>Operator System Prompt</label>
+              <textarea name="opsOperatorSystemPrompt"></textarea>
+            </div>
+            <div class="grid two">
+              <div class="field"><label><input name="opsAutoFixCritical" type="checkbox"> Auto-contain safe critical issues</label></div>
+              <div class="field"><label><input name="opsNativeWindowsNotifications" type="checkbox"> Native Windows notifications</label></div>
+              <div class="field"><label><input name="opsBrowserNotifications" type="checkbox"> Browser notifications</label></div>
+              <div class="field"><label><input name="opsCloudflareEnabled" type="checkbox"> Cloudflare in front of OCI</label></div>
+              <div class="field"><label><input name="opsLocalOwnerConsoleEnabled" type="checkbox"> Local owner console tray app enabled</label></div>
+              <div class="field"><label><input name="opsSensitiveTextApprovalsRequireCode" type="checkbox"> Text approvals require one-time code</label></div>
+              <div class="field"><label><input name="opsOperatorFullAccess" type="checkbox"> Allow operator full repo access after approval</label></div>
+            </div>
+          </article>
+
+          <article class="card">
             <h2>Logging + Tracking Keys</h2>
             <div class="field">
               <label>Proton Drive Log Path</label>
@@ -353,6 +534,93 @@
             <div class="field">
               <label>Webhook URL (optional)</label>
               <input name="customWebhookUrl" placeholder="https://...">
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Phase One Fill-Later Secrets</h2>
+            <p class="muted">Leave these blank until you are actually ready to wire the live services. The manager checklist above will tell you what is still missing.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label>Twilio Account SID</label>
+                <input name="twilioAccountSid" type="password">
+              </div>
+              <div class="field">
+                <label>Twilio Auth Token</label>
+                <input name="twilioAuthToken" type="password">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Twilio Number</label>
+                <input name="twilioPhoneNumber" placeholder="+1...">
+              </div>
+              <div class="field">
+                <label>Your Real Cell Number</label>
+                <input name="twilioOwnerPhone" placeholder="+1...">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Proton SMTP Host</label>
+                <input name="protonSmtpHost" placeholder="Fill when Proton send details are ready">
+              </div>
+              <div class="field">
+                <label>Proton SMTP Port</label>
+                <input name="protonSmtpPort" type="number" min="1" placeholder="587">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Proton SMTP Username</label>
+                <input name="protonSmtpUsername">
+              </div>
+              <div class="field">
+                <label>Proton SMTP Password / App Password</label>
+                <input name="protonSmtpPassword" type="password">
+              </div>
+            </div>
+            <div class="field">
+              <label>Proton From Email</label>
+              <input name="protonFromEmail" placeholder="SiteAdmin@slendystuff.com">
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>OCI SSH Host</label>
+                <input name="ociSshHost" placeholder="Public IP or DNS">
+              </div>
+              <div class="field">
+                <label>OCI SSH User</label>
+                <input name="ociSshUser" placeholder="ubuntu">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>OCI SSH Key Path On This PC</label>
+                <input name="ociSshKeyPath" placeholder="C:\path\to\oci-key.pem">
+              </div>
+              <div class="field">
+                <label>OCI Backup Mount Path</label>
+                <input name="ociBackupMountPath" placeholder="/srv/slendystuff-backups">
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>Cloudflare API Token</label>
+                <input name="cloudflareApiToken" type="password">
+              </div>
+              <div class="field">
+                <label>Cloudflare Zone ID</label>
+                <input name="cloudflareZoneId">
+              </div>
+            </div>
+            <div class="field">
+              <label>Cloudflare Account Email</label>
+              <input name="cloudflareAccountEmail">
+            </div>
+            <div class="field">
+              <label>Owner Text Approval Secret</label>
+              <input name="ownerTextApprovalSecret" type="password" placeholder="Used later for one-time approval codes">
             </div>
           </article>
 

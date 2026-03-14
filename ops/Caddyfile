@@ -1,0 +1,30 @@
+{
+	email {$ACME_EMAIL}
+}
+
+(common_proxy) {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	reverse_proxy app:4173 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+	}
+}
+
+{$API_DOMAIN} {
+	import common_proxy
+}
+
+{$OPS_DOMAIN} {
+	@root path /
+	redir @root /admin/ 308
+	import common_proxy
+}

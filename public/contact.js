@@ -44,7 +44,7 @@
     }
 
     try {
-      await fetch("/api/contact-message", {
+      await app.apiFetch("/api/contact-message", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

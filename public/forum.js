@@ -42,9 +42,8 @@
   function bindEvents() {
     if (logoutButton) {
       logoutButton.addEventListener("click", async () => {
-        await fetch("/api/account/logout", {
+        await app.apiFetch("/api/account/logout", {
           method: "POST",
-          credentials: "same-origin"
         });
         state.account = null;
         renderAuthState();
@@ -62,10 +61,9 @@
         };
 
         setStatus(authStatus, "Signing in...", "");
-        const response = await fetch("/api/account/login", {
+        const response = await app.apiFetch("/api/account/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(payload)
         });
         const body = await response.json();
@@ -91,10 +89,9 @@
         };
 
         setStatus(authStatus, "Creating account...", "");
-        const response = await fetch("/api/account/register", {
+        const response = await app.apiFetch("/api/account/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(payload)
         });
         const body = await response.json();
@@ -124,10 +121,9 @@
         };
 
         setStatus(topicStatus, "Posting topic...", "");
-        const response = await fetch("/api/forum/topics", {
+        const response = await app.apiFetch("/api/forum/topics", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify(payload)
         });
         const body = await response.json();
@@ -164,10 +160,9 @@
         }
 
         setStatus(pageStatus, "Posting comment...", "");
-        const response = await fetch(`/api/forum/topics/${encodeURIComponent(topicId)}/comments`, {
+        const response = await app.apiFetch(`/api/forum/topics/${encodeURIComponent(topicId)}/comments`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
           body: JSON.stringify({ body })
         });
         const payload = await response.json();
@@ -187,9 +182,7 @@
 
   async function refreshSession() {
     try {
-      const response = await fetch("/api/account/session", {
-        credentials: "same-origin"
-      });
+      const response = await app.apiFetch("/api/account/session");
       const payload = await response.json();
       if (!response.ok || !payload.ok) {
         state.account = null;
@@ -222,7 +215,7 @@
 
   async function loadTopics() {
     setStatus(pageStatus, "Loading topics...", "");
-    const response = await fetch("/api/forum/topics", { credentials: "same-origin" });
+    const response = await app.apiFetch("/api/forum/topics");
     const payload = await response.json();
     if (!response.ok || !payload.ok) {
       setStatus(pageStatus, payload.error || "Could not load topics.", "error");

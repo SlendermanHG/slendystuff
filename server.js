@@ -3,6 +3,9 @@ const cookieParser = require("cookie-parser");
 const crypto = require("crypto");
 const fs = require("fs/promises");
 const path = require("path");
+const os = require("os");
+const { execFile, spawn } = require("child_process");
+const { promisify } = require("util");
 
 const app = express();
 const trustProxyRaw = String(process.env.TRUST_PROXY_HOPS || "1").trim();
@@ -16,9 +19,12 @@ const IS_RENDER = String(process.env.RENDER || "").toLowerCase() === "true";
 const PERSIST_ROOT = process.env.PERSIST_ROOT || (IS_RENDER ? "/var/data/websitemanbot" : ROOT_DIR);
 const DATA_DIR = process.env.DATA_DIR || path.join(PERSIST_ROOT, "data");
 const LOG_DIR_FALLBACK = process.env.LOG_DIR || path.join(PERSIST_ROOT, "logs");
+const MANAGED_REPO_PATH = process.env.MANAGED_REPO_PATH || ROOT_DIR;
+const IS_OCI_DEPLOY = os.platform() !== "win32" && Boolean(process.env.MANAGED_REPO_PATH);
 const SETTINGS_PATH = process.env.SETTINGS_PATH || path.join(DATA_DIR, "settings.json");
 const SECRETS_PATH = process.env.SECRETS_PATH || path.join(DATA_DIR, "secrets.json");
 const SUPPORT_REQUESTS_PATH = process.env.SUPPORT_REQUESTS_PATH || path.join(DATA_DIR, "support-requests.json");
+const CONTACT_MESSAGES_PATH = process.env.CONTACT_MESSAGES_PATH || path.join(DATA_DIR, "contact-messages.json");
 const ACCOUNTS_PATH = process.env.ACCOUNTS_PATH || path.join(DATA_DIR, "accounts.json");
 const FORUM_TOPICS_PATH = process.env.FORUM_TOPICS_PATH || path.join(DATA_DIR, "forum-topics.json");
 
@@ -56,13 +62,27 @@ const IP_GEO_LOOKUP_CONCURRENCY = Math.min(10, Math.max(1, Number(process.env.IP
 let settingsCache = null;
 let secretsCache = null;
 let supportRequestsCache = [];
+let contactMessagesCache = [];
 let accountsCache = [];
 let forumTopicsCache = [];
 let writeQueue = Promise.resolve();
 let anydeskRefreshTimer = null;
+let securityScanTimer = null;
 let rwcovInfoCache = null;
 const ipGeoCache = new Map();
 const ipGeoInFlight = new Map();
+const execFileAsync = promisify(execFile);
+const managerActivityCache = [];
+let securityFindingsCache = [];
+let managerStatusCache = {
+  repoStatus: null,
+  siteHealth: null,
+  lastSecurityScanAt: null,
+  lastSecurityScanTrigger: null,
+  lastSecurityScanSummary: null,
+  lastOperatorRunAt: null,
+  lastOperatorSummary: null
+};
 
 const defaultSettings = {
   brand: {
@@ -91,6 +111,32 @@ const defaultSettings = {
   },
   analytics: {
     customTrackingEnabled: true
+  },
+  opsManager: {
+    enabled: true,
+    githubRepo: "SlendermanHG/slendystuff.com",
+    defaultBranch: "main",
+    managedRepoPath: MANAGED_REPO_PATH,
+    domainName: "slendystuff.com",
+    apiSubdomain: "api.slendystuff.com",
+    opsSubdomain: "ops.slendystuff.com",
+    domainProvider: "Squarespace",
+    dnsNotes: "Squarespace is managing the DNS zone for slendystuff.com.",
+    alertEmail: "siteadmin@slendystuff.com",
+    nativeWindowsNotifications: true,
+    browserNotifications: true,
+    securityScanIntervalMinutes: 60,
+    criticalReminderMinutes: 15,
+    normalReminderMinutes: 60,
+    autoFixCritical: true,
+    cloudflareEnabled: true,
+    localOwnerConsoleEnabled: true,
+    sensitiveTextApprovalsRequireCode: true,
+    operatorBaseUrl: "https://api.openai.com/v1",
+    operatorModel: "gpt-5",
+    operatorFullAccess: true,
+    operatorSystemPrompt:
+      "You are the Slendy Stuff website operator. Prefer minimal, production-safe changes. If asked to write files, return complete file contents."
   },
   coupons: [
     {
@@ -160,14 +206,42 @@ const defaultSecrets = {
   customWebhookUrl: "",
   discordRemodelCode: process.env.DISCORD_REMODEL_CODE || "",
   discordRemodelDiscountPercent: Number(process.env.DISCORD_REMODEL_DISCOUNT_PERCENT || 40),
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID || "",
+    authToken: process.env.TWILIO_AUTH_TOKEN || "",
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
+    ownerPhone: process.env.TWILIO_OWNER_PHONE || ""
+  },
+  protonSmtp: {
+    host: process.env.PROTON_SMTP_HOST || "",
+    port: Number(process.env.PROTON_SMTP_PORT || 587),
+    username: process.env.PROTON_SMTP_USER || "",
+    password: process.env.PROTON_SMTP_PASSWORD || "",
+    fromEmail: process.env.PROTON_SMTP_FROM_EMAIL || "siteadmin@slendystuff.com"
+  },
+  oci: {
+    sshHost: "",
+    sshUser: "ubuntu",
+    sshKeyPath: "",
+    backupMountPath: "/srv/slendystuff-backups"
+  },
+  cloudflare: {
+    apiToken: process.env.CLOUDFLARE_API_TOKEN || "",
+    zoneId: process.env.CLOUDFLARE_ZONE_ID || "",
+    accountEmail: process.env.CLOUDFLARE_EMAIL || ""
+  },
+  ownerApproval: {
+    textApprovalSecret: process.env.OWNER_TEXT_APPROVAL_SECRET || ""
+  },
   apiKeys: {
-    openai: "",
+    openai: process.env.OPENAI_API_KEY || "",
     discord: "",
-    stripeSecret: ""
+    stripeSecret: process.env.STRIPE_SECRET_KEY || ""
   }
 };
 
 const defaultSupportRequests = [];
+const defaultContactMessages = [];
 const defaultAccounts = [];
 const defaultForumTopics = [];
 
@@ -265,6 +339,7 @@ function normalizeSettings(payload) {
     stripeLinks: { ...defaultSettings.stripeLinks, ...(payload.stripeLinks || {}) },
     support: { ...defaultSettings.support, ...(payload.support || {}) },
     analytics: { ...defaultSettings.analytics, ...(payload.analytics || {}) },
+    opsManager: { ...defaultSettings.opsManager, ...(payload.opsManager || {}) },
     coupons: Array.isArray(payload.coupons) ? payload.coupons : defaultSettings.coupons,
     products: Array.isArray(payload.products) ? payload.products : defaultSettings.products
   };
@@ -285,6 +360,58 @@ function normalizeSettings(payload) {
   merged.support.anydeskSourceUrl = normalizeHttpsUrl(merged.support.anydeskSourceUrl) || defaultSettings.support.anydeskSourceUrl;
   merged.support.refreshIntervalHours = Math.min(168, Math.max(1, Number(merged.support.refreshIntervalHours || 12)));
   merged.support.intro = truncate(merged.support.intro, 400);
+  merged.opsManager.enabled = merged.opsManager.enabled !== false;
+  merged.opsManager.githubRepo = truncate(safeString(merged.opsManager.githubRepo, defaultSettings.opsManager.githubRepo).trim(), 160);
+  merged.opsManager.defaultBranch = truncate(safeString(merged.opsManager.defaultBranch, "main").trim(), 80) || "main";
+  merged.opsManager.managedRepoPath =
+    truncate(safeString(merged.opsManager.managedRepoPath, MANAGED_REPO_PATH).trim(), 300) || MANAGED_REPO_PATH;
+  if (
+    (os.platform() !== "win32" && /^[a-zA-Z]:[\\/]/.test(merged.opsManager.managedRepoPath)) ||
+    (os.platform() === "win32" && merged.opsManager.managedRepoPath.startsWith("/"))
+  ) {
+    merged.opsManager.managedRepoPath = MANAGED_REPO_PATH;
+  }
+  merged.opsManager.domainName = truncate(safeString(merged.opsManager.domainName, "slendystuff.com").trim(), 120);
+  merged.opsManager.apiSubdomain = truncate(
+    safeString(merged.opsManager.apiSubdomain, `api.${merged.opsManager.domainName}`).trim(),
+    160
+  );
+  merged.opsManager.opsSubdomain = truncate(
+    safeString(merged.opsManager.opsSubdomain, `ops.${merged.opsManager.domainName}`).trim(),
+    160
+  );
+  merged.opsManager.domainProvider = truncate(safeString(merged.opsManager.domainProvider, "Squarespace").trim(), 120);
+  merged.opsManager.dnsNotes = truncate(safeString(merged.opsManager.dnsNotes, "").trim(), 600);
+  merged.opsManager.alertEmail =
+    normalizeEmail(merged.opsManager.alertEmail) || normalizeEmail(defaultSettings.opsManager.alertEmail);
+  merged.opsManager.nativeWindowsNotifications = merged.opsManager.nativeWindowsNotifications !== false;
+  merged.opsManager.browserNotifications = merged.opsManager.browserNotifications !== false;
+  merged.opsManager.securityScanIntervalMinutes = Math.min(
+    1440,
+    Math.max(5, Number(merged.opsManager.securityScanIntervalMinutes || 60))
+  );
+  merged.opsManager.criticalReminderMinutes = Math.min(
+    720,
+    Math.max(5, Number(merged.opsManager.criticalReminderMinutes || 15))
+  );
+  merged.opsManager.normalReminderMinutes = Math.min(
+    1440,
+    Math.max(15, Number(merged.opsManager.normalReminderMinutes || 60))
+  );
+  merged.opsManager.autoFixCritical = merged.opsManager.autoFixCritical !== false;
+  merged.opsManager.cloudflareEnabled = merged.opsManager.cloudflareEnabled !== false;
+  merged.opsManager.localOwnerConsoleEnabled = merged.opsManager.localOwnerConsoleEnabled !== false;
+  merged.opsManager.sensitiveTextApprovalsRequireCode = merged.opsManager.sensitiveTextApprovalsRequireCode !== false;
+  merged.opsManager.operatorBaseUrl =
+    normalizeHttpsUrl(merged.opsManager.operatorBaseUrl) || defaultSettings.opsManager.operatorBaseUrl;
+  merged.opsManager.operatorModel =
+    truncate(safeString(merged.opsManager.operatorModel, defaultSettings.opsManager.operatorModel).trim(), 120) ||
+    defaultSettings.opsManager.operatorModel;
+  merged.opsManager.operatorFullAccess = merged.opsManager.operatorFullAccess !== false;
+  merged.opsManager.operatorSystemPrompt = truncate(
+    safeString(merged.opsManager.operatorSystemPrompt, defaultSettings.opsManager.operatorSystemPrompt).trim(),
+    2000
+  );
 
   merged.coupons = merged.coupons
     .filter((item) => item && typeof item === "object")
@@ -325,6 +452,26 @@ function normalizeSecrets(payload) {
   const merged = {
     ...defaultSecrets,
     ...payload,
+    twilio: {
+      ...defaultSecrets.twilio,
+      ...((payload && payload.twilio) || {})
+    },
+    protonSmtp: {
+      ...defaultSecrets.protonSmtp,
+      ...((payload && payload.protonSmtp) || {})
+    },
+    oci: {
+      ...defaultSecrets.oci,
+      ...((payload && payload.oci) || {})
+    },
+    cloudflare: {
+      ...defaultSecrets.cloudflare,
+      ...((payload && payload.cloudflare) || {})
+    },
+    ownerApproval: {
+      ...defaultSecrets.ownerApproval,
+      ...((payload && payload.ownerApproval) || {})
+    },
     apiKeys: {
       ...defaultSecrets.apiKeys,
       ...((payload && payload.apiKeys) || {})
@@ -338,9 +485,70 @@ function normalizeSecrets(payload) {
   merged.customWebhookUrl = normalizeHttpsUrl(merged.customWebhookUrl);
   merged.discordRemodelCode = truncate(safeString(merged.discordRemodelCode, "").trim(), 120);
   merged.discordRemodelDiscountPercent = Math.min(90, Math.max(0, Number(merged.discordRemodelDiscountPercent || 40)));
-  merged.apiKeys.openai = truncate(safeString(merged.apiKeys.openai, "").trim(), 300);
+  merged.twilio.accountSid = truncate(
+    safeString(merged.twilio.accountSid, "").trim() || safeString(defaultSecrets.twilio.accountSid, "").trim(),
+    120
+  );
+  merged.twilio.authToken = truncate(
+    safeString(merged.twilio.authToken, "").trim() || safeString(defaultSecrets.twilio.authToken, "").trim(),
+    200
+  );
+  merged.twilio.phoneNumber = truncate(
+    safeString(merged.twilio.phoneNumber, "").trim() || safeString(defaultSecrets.twilio.phoneNumber, "").trim(),
+    40
+  );
+  merged.twilio.ownerPhone = truncate(
+    safeString(merged.twilio.ownerPhone, "").trim() || safeString(defaultSecrets.twilio.ownerPhone, "").trim(),
+    40
+  );
+  merged.protonSmtp.host = truncate(
+    safeString(merged.protonSmtp.host, "").trim() || safeString(defaultSecrets.protonSmtp.host, "").trim(),
+    160
+  );
+  merged.protonSmtp.port = Math.min(
+    65535,
+    Math.max(1, Number(merged.protonSmtp.port || defaultSecrets.protonSmtp.port || 587))
+  );
+  merged.protonSmtp.username = truncate(
+    safeString(merged.protonSmtp.username, "").trim() || safeString(defaultSecrets.protonSmtp.username, "").trim(),
+    200
+  );
+  merged.protonSmtp.password = truncate(
+    safeString(merged.protonSmtp.password, "").trim() || safeString(defaultSecrets.protonSmtp.password, "").trim(),
+    300
+  );
+  merged.protonSmtp.fromEmail =
+    normalizeEmail(merged.protonSmtp.fromEmail) || normalizeEmail(defaultSecrets.protonSmtp.fromEmail);
+  merged.oci.sshHost = truncate(safeString(merged.oci.sshHost, "").trim(), 200);
+  merged.oci.sshUser = truncate(safeString(merged.oci.sshUser, "ubuntu").trim(), 80) || "ubuntu";
+  merged.oci.sshKeyPath = truncate(safeString(merged.oci.sshKeyPath, "").trim(), 300);
+  merged.oci.backupMountPath =
+    truncate(safeString(merged.oci.backupMountPath, defaultSecrets.oci.backupMountPath).trim(), 300) ||
+    defaultSecrets.oci.backupMountPath;
+  merged.cloudflare.apiToken = truncate(
+    safeString(merged.cloudflare.apiToken, "").trim() || safeString(defaultSecrets.cloudflare.apiToken, "").trim(),
+    300
+  );
+  merged.cloudflare.zoneId = truncate(
+    safeString(merged.cloudflare.zoneId, "").trim() || safeString(defaultSecrets.cloudflare.zoneId, "").trim(),
+    120
+  );
+  merged.cloudflare.accountEmail =
+    normalizeEmail(merged.cloudflare.accountEmail) || normalizeEmail(defaultSecrets.cloudflare.accountEmail);
+  merged.ownerApproval.textApprovalSecret = truncate(
+    safeString(merged.ownerApproval.textApprovalSecret, "").trim() ||
+      safeString(defaultSecrets.ownerApproval.textApprovalSecret, "").trim(),
+    120
+  );
+  merged.apiKeys.openai = truncate(
+    safeString(merged.apiKeys.openai, "").trim() || safeString(defaultSecrets.apiKeys.openai, "").trim(),
+    300
+  );
   merged.apiKeys.discord = truncate(safeString(merged.apiKeys.discord, "").trim(), 300);
-  merged.apiKeys.stripeSecret = truncate(safeString(merged.apiKeys.stripeSecret, "").trim(), 300);
+  merged.apiKeys.stripeSecret = truncate(
+    safeString(merged.apiKeys.stripeSecret, "").trim() || safeString(defaultSecrets.apiKeys.stripeSecret, "").trim(),
+    300
+  );
 
   return merged;
 }
@@ -349,6 +557,9 @@ function normalizeSupportRequestStatus(value) {
   const normalized = safeString(value, "").toLowerCase();
   if (normalized === "in_progress") {
     return "in_progress";
+  }
+  if (normalized === "waiting_on_owner") {
+    return "waiting_on_owner";
   }
   if (normalized === "closed") {
     return "closed";
@@ -379,6 +590,48 @@ function normalizeSupportRequests(payload) {
   return payload
     .filter((item) => item && typeof item === "object")
     .map((item) => normalizeSupportRequest(item))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+}
+
+function normalizeContactMessageStatus(value) {
+  const normalized = safeString(value, "").toLowerCase();
+  if (normalized === "in_progress") {
+    return "in_progress";
+  }
+  if (normalized === "waiting_on_owner") {
+    return "waiting_on_owner";
+  }
+  if (normalized === "closed") {
+    return "closed";
+  }
+  return "new";
+}
+
+function normalizeContactMessage(item) {
+  return {
+    id: truncate(safeString(item.id, crypto.randomBytes(8).toString("hex")), 24),
+    name: truncate(safeString(item.name, "Anonymous"), 120),
+    email: normalizeEmail(item.email),
+    subject: truncate(safeString(item.subject, ""), 200),
+    preferredContact: truncate(safeString(item.preferredContact, "email"), 40),
+    discordUsername: truncate(safeString(item.discordUsername, ""), 80),
+    message: truncate(safeString(item.message, ""), 4000),
+    clientTimezone: truncate(safeString(item.clientTimezone, ""), 80),
+    status: normalizeContactMessageStatus(item.status),
+    adminNotes: truncate(safeString(item.adminNotes, ""), 1200),
+    createdAt: safeString(item.createdAt, nowIso()),
+    updatedAt: safeString(item.updatedAt, safeString(item.createdAt, nowIso()))
+  };
+}
+
+function normalizeContactMessages(payload) {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .filter((item) => item && typeof item === "object")
+    .map((item) => normalizeContactMessage(item))
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
@@ -572,6 +825,7 @@ async function initData() {
   settingsCache = normalizeSettings(await readJson(SETTINGS_PATH, defaultSettings));
   secretsCache = normalizeSecrets(await readJson(SECRETS_PATH, defaultSecrets));
   supportRequestsCache = normalizeSupportRequests(await readJson(SUPPORT_REQUESTS_PATH, defaultSupportRequests));
+  contactMessagesCache = normalizeContactMessages(await readJson(CONTACT_MESSAGES_PATH, defaultContactMessages));
   accountsCache = normalizeAccounts(await readJson(ACCOUNTS_PATH, defaultAccounts));
   forumTopicsCache = normalizeForumTopics(await readJson(FORUM_TOPICS_PATH, defaultForumTopics));
 
@@ -823,6 +1077,657 @@ function summarizeIpLocations(ipDetails) {
     new Set((Array.isArray(ipDetails) ? ipDetails : []).map((item) => safeString(item.location, "").trim()).filter(Boolean))
   );
   return uniqueLocations.length > 0 ? uniqueLocations.join(" | ") : "-";
+}
+
+function getManagedRepoPath() {
+  const configuredPath = safeString(settingsCache && settingsCache.opsManager && settingsCache.opsManager.managedRepoPath, "").trim();
+  if (!configuredPath) {
+    return MANAGED_REPO_PATH;
+  }
+
+  if ((os.platform() !== "win32" && /^[a-zA-Z]:[\\/]/.test(configuredPath)) || (os.platform() === "win32" && configuredPath.startsWith("/"))) {
+    return MANAGED_REPO_PATH;
+  }
+
+  return path.isAbsolute(configuredPath) ? configuredPath : path.join(ROOT_DIR, configuredPath);
+}
+
+function pathInside(basePath, targetPath) {
+  const resolvedBase = path.resolve(basePath);
+  const resolvedTarget = path.resolve(targetPath);
+  return resolvedTarget === resolvedBase || resolvedTarget.startsWith(`${resolvedBase}${path.sep}`);
+}
+
+function encodePowerShell(script) {
+  return Buffer.from(script, "utf16le").toString("base64");
+}
+
+function escapePowerShellSingleQuoted(value) {
+  return String(value || "").replace(/'/g, "''");
+}
+
+function notifyWindowsDesktop(title, message) {
+  if (os.platform() !== "win32") {
+    return;
+  }
+  if (!settingsCache || !settingsCache.opsManager || settingsCache.opsManager.nativeWindowsNotifications === false) {
+    return;
+  }
+
+  const script = `
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$notify = New-Object System.Windows.Forms.NotifyIcon
+$notify.Icon = [System.Drawing.SystemIcons]::Information
+$notify.Visible = $true
+$notify.BalloonTipTitle = '${escapePowerShellSingleQuoted(title)}'
+$notify.BalloonTipText = '${escapePowerShellSingleQuoted(message)}'
+$notify.ShowBalloonTip(5000)
+Start-Sleep -Seconds 6
+$notify.Dispose()
+`;
+
+  const child = spawn(
+    "powershell",
+    ["-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", encodePowerShell(script)],
+    {
+      windowsHide: true,
+      stdio: "ignore"
+    }
+  );
+  child.on("error", () => {});
+}
+
+async function recordManagerActivity(type, message, details = {}) {
+  const entry = {
+    id: crypto.randomBytes(8).toString("hex"),
+    type: truncate(safeString(type, "info"), 80),
+    message: truncate(safeString(message, ""), 240),
+    details: sanitizeMeta(details),
+    createdAt: nowIso()
+  };
+
+  managerActivityCache.unshift(entry);
+  managerActivityCache.splice(200);
+  await appendLog("manager-activity", entry);
+  return entry;
+}
+
+function hasSecretValue(value) {
+  return Boolean(safeString(value, "").trim());
+}
+
+function buildPhaseOneReadiness() {
+  const items = [
+    {
+      id: "oci-ssh",
+      label: "OCI SSH host and key path",
+      ready: IS_OCI_DEPLOY || (hasSecretValue(secretsCache?.oci?.sshHost) && hasSecretValue(secretsCache?.oci?.sshKeyPath)),
+      hint: IS_OCI_DEPLOY ? "This backend is already running on OCI." : "Needed before the first OCI deploy."
+    },
+    {
+      id: "twilio",
+      label: "Twilio account, token, and sending number",
+      ready:
+        hasSecretValue(secretsCache?.twilio?.accountSid) &&
+        hasSecretValue(secretsCache?.twilio?.authToken) &&
+        hasSecretValue(secretsCache?.twilio?.phoneNumber),
+      hint: "Needed for two-way texts and login codes."
+    },
+    {
+      id: "owner-phone",
+      label: "Owner destination phone number",
+      ready: hasSecretValue(secretsCache?.twilio?.ownerPhone),
+      hint: "This is your real cell number that receives alerts."
+    },
+    {
+      id: "proton-smtp",
+      label: "Proton send credentials",
+      ready:
+        hasSecretValue(secretsCache?.protonSmtp?.host) &&
+        hasSecretValue(secretsCache?.protonSmtp?.username) &&
+        hasSecretValue(secretsCache?.protonSmtp?.password),
+      hint: "Needed for verification emails and admin alerts."
+    },
+    {
+      id: "cloudflare",
+      label: "Cloudflare zone and API token",
+      ready:
+        hasSecretValue(secretsCache?.cloudflare?.zoneId) &&
+        hasSecretValue(secretsCache?.cloudflare?.apiToken),
+      hint: "Needed when routing api/ops subdomains through Cloudflare."
+    },
+    {
+      id: "openai",
+      label: "OpenAI API key",
+      ready: hasSecretValue(secretsCache?.apiKeys?.openai),
+      hint: "Needed for the operator and future moderation assists."
+    },
+    {
+      id: "stripe",
+      label: "Stripe secret key",
+      ready: hasSecretValue(secretsCache?.apiKeys?.stripeSecret),
+      hint: "Needed when checkout moves behind OCI."
+    },
+    {
+      id: "owner-approval",
+      label: "Owner text approval secret",
+      ready: hasSecretValue(secretsCache?.ownerApproval?.textApprovalSecret),
+      hint: "Needed for one-time code approval flows over text."
+    }
+  ];
+
+  const readyCount = items.filter((item) => item.ready).length;
+  const missingItems = items.filter((item) => !item.ready);
+
+  return {
+    total: items.length,
+    readyCount,
+    missingCount: missingItems.length,
+    nextMissing: missingItems[0] || null,
+    items
+  };
+}
+
+async function runGit(args, cwd = getManagedRepoPath()) {
+  try {
+    const result = await execFileAsync("git", args, {
+      cwd,
+      windowsHide: true,
+      timeout: 15000
+    });
+    return safeString(result.stdout, "").trim();
+  } catch {
+    return "";
+  }
+}
+
+async function collectRepoStatus() {
+  const cwd = getManagedRepoPath();
+  const [branch, shortStatus, remoteUrl, lastCommit] = await Promise.all([
+    runGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd),
+    runGit(["status", "--short"], cwd),
+    runGit(["remote", "get-url", "origin"], cwd),
+    runGit(["log", "-1", "--pretty=format:%h %cs %s"], cwd)
+  ]);
+
+  const changedFiles = shortStatus
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 25);
+
+  return {
+    path: cwd,
+    branch: branch || "unknown",
+    remoteUrl: remoteUrl || "",
+    lastCommit: lastCommit || "",
+    isDirty: changedFiles.length > 0,
+    changedFiles
+  };
+}
+
+async function walkFiles(directory, options = {}) {
+  const results = [];
+  const ignoreNames = new Set(options.ignoreNames || []);
+  const maxDepth = Number.isFinite(options.maxDepth) ? options.maxDepth : 8;
+
+  async function visit(currentPath, depth) {
+    if (depth > maxDepth) {
+      return;
+    }
+
+    const entries = await fs.readdir(currentPath, { withFileTypes: true }).catch(() => []);
+    for (const entry of entries) {
+      if (ignoreNames.has(entry.name)) {
+        continue;
+      }
+      const nextPath = path.join(currentPath, entry.name);
+      if (entry.isDirectory()) {
+        await visit(nextPath, depth + 1);
+      } else if (entry.isFile()) {
+        results.push(nextPath);
+      }
+    }
+  }
+
+  await visit(directory, 0);
+  return results;
+}
+
+async function fetchSiteHealth(url) {
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "User-Agent": "slendystuff-ops-bot/1.0" },
+      signal: AbortSignal.timeout(10000)
+    });
+    return {
+      url,
+      status: response.ok ? "ok" : "error",
+      statusCode: response.status,
+      responseTimeMs: Date.now() - startedAt,
+      checkedAt: nowIso()
+    };
+  } catch (error) {
+    return {
+      url,
+      status: "error",
+      statusCode: null,
+      responseTimeMs: Date.now() - startedAt,
+      checkedAt: nowIso(),
+      error: safeString(error.message, "Site health check failed")
+    };
+  }
+}
+
+async function quarantineFile(filePath) {
+  const quarantineRoot = path.join(DATA_DIR, "quarantine", dayStamp());
+  const relativePath = path.relative(getManagedRepoPath(), filePath);
+  const destinationPath = path.join(quarantineRoot, relativePath);
+  await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+  await fs.rename(filePath, destinationPath);
+  return destinationPath;
+}
+
+function buildFindingFingerprint(category, target) {
+  return `${category}:${target}`;
+}
+
+async function runSecurityScan(trigger = "manual") {
+  const repoStatus = await collectRepoStatus();
+  const priorCriticalFingerprints = new Set(
+    (Array.isArray(securityFindingsCache) ? securityFindingsCache : [])
+      .filter((finding) => finding.severity === "critical")
+      .map((finding) => finding.fingerprint)
+  );
+  const findings = [];
+  const autoFixEnabled = !settingsCache || !settingsCache.opsManager || settingsCache.opsManager.autoFixCritical !== false;
+  const requiredGitignoreEntries = [
+    "node_modules/",
+    "logs/",
+    ".env",
+    ".env.*",
+    "data/secrets.json",
+    "data/accounts.json",
+    "data/admins.json",
+    "data/support-requests.json",
+    "data/contact-messages.json"
+  ];
+
+  const gitignorePath = path.join(ROOT_DIR, ".gitignore");
+  const gitignoreRaw = await fs.readFile(gitignorePath, "utf8").catch(() => "");
+  const missingGitignoreEntries = requiredGitignoreEntries.filter((entry) => !gitignoreRaw.split(/\r?\n/).includes(entry));
+  if (missingGitignoreEntries.length > 0) {
+    let fixed = false;
+    if (autoFixEnabled) {
+      const nextRaw = `${gitignoreRaw.trimEnd()}\n${missingGitignoreEntries.join("\n")}\n`;
+      await fs.writeFile(gitignorePath, nextRaw, "utf8");
+      fixed = true;
+    }
+    findings.push({
+      fingerprint: buildFindingFingerprint("gitignore", missingGitignoreEntries.join(",")),
+      category: "gitignore",
+      severity: "critical",
+      status: fixed ? "fixed" : "open",
+      title: "Runtime secret files are not fully gitignored",
+      target: ".gitignore",
+      details: `Missing entries: ${missingGitignoreEntries.join(", ")}`,
+      fixed
+    });
+  }
+
+  if (ADMIN_PASSWORD === "change-this-admin-password" || (ENFORCE_STRONG_ADMIN_PASSWORD === false && !isStrongPassword(ADMIN_PASSWORD))) {
+    findings.push({
+      fingerprint: buildFindingFingerprint("admin-password", "ADMIN_PASSWORD"),
+      category: "credentials",
+      severity: "critical",
+      status: "open",
+      title: "Admin password is default or weak",
+      target: "ADMIN_PASSWORD",
+      details: "Set a strong ADMIN_PASSWORD before leaving the manager running continuously.",
+      fixed: false
+    });
+  }
+
+  const sensitiveNamePattern =
+    /(^|[\\/])(\.env(\..+)?|secrets(\..+)?\.json|accounts(\..+)?\.json|admins(\..+)?\.json|support-requests(\..+)?\.json|contact-messages(\..+)?\.json)$/i;
+  const sensitiveExtensionPattern = /\.(sql|bak|db|sqlite|zip)$/i;
+  const publicFiles = await walkFiles(PUBLIC_DIR, { ignoreNames: new Set(["node_modules", ".git"]) });
+  for (const filePath of publicFiles) {
+    const relativePath = path.relative(ROOT_DIR, filePath).replaceAll("\\", "/");
+    const lowerRelativePath = relativePath.toLowerCase();
+    const isSensitiveName = sensitiveNamePattern.test(lowerRelativePath);
+    const isSensitiveExtension = sensitiveExtensionPattern.test(lowerRelativePath);
+    if (!isSensitiveName && !isSensitiveExtension) {
+      continue;
+    }
+
+    let fixed = false;
+    let destinationPath = "";
+    if (autoFixEnabled) {
+      destinationPath = await quarantineFile(filePath);
+      fixed = true;
+    }
+    findings.push({
+      fingerprint: buildFindingFingerprint("public-sensitive-file", lowerRelativePath),
+      category: "public-data-exposure",
+      severity: "critical",
+      status: fixed ? "fixed" : "open",
+      title: "Sensitive file exposed under public site content",
+      target: relativePath,
+      details: fixed ? `Moved to ${destinationPath}` : "Move this file out of the public web root.",
+      fixed
+    });
+  }
+
+  const secretPattern = /(gh[op]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|api[_-]?key\s*[:=]\s*["']?[A-Za-z0-9_\-]{16,})/;
+  for (const filePath of publicFiles) {
+    const extension = path.extname(filePath).toLowerCase();
+    if (![".js", ".json", ".html", ".txt", ".map", ".css"].includes(extension)) {
+      continue;
+    }
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat || stat.size > 512 * 1024) {
+      continue;
+    }
+    const contents = await fs.readFile(filePath, "utf8").catch(() => "");
+    if (!secretPattern.test(contents)) {
+      continue;
+    }
+    const relativePath = path.relative(ROOT_DIR, filePath).replaceAll("\\", "/");
+    let fixed = false;
+    let destinationPath = "";
+    if (autoFixEnabled && [".json", ".txt", ".map"].includes(extension)) {
+      destinationPath = await quarantineFile(filePath);
+      fixed = true;
+    }
+    findings.push({
+      fingerprint: buildFindingFingerprint("public-secret-pattern", relativePath),
+      category: "public-data-exposure",
+      severity: "critical",
+      status: fixed ? "fixed" : "open",
+      title: "Potential secret pattern found in a public asset",
+      target: relativePath,
+      details: fixed
+        ? `Moved suspicious asset to ${destinationPath}`
+        : "Review and remove credentials or tokens from this public-facing file.",
+      fixed
+    });
+  }
+
+  const domainName = safeString(settingsCache && settingsCache.opsManager && settingsCache.opsManager.domainName, "").trim();
+  const siteUrl = domainName ? `https://${domainName}` : "";
+  const siteHealth = siteUrl ? await fetchSiteHealth(siteUrl) : null;
+  if (siteHealth && siteHealth.status !== "ok") {
+    findings.push({
+      fingerprint: buildFindingFingerprint("site-health", siteHealth.url),
+      category: "availability",
+      severity: "high",
+      status: "open",
+      title: "Public site health check failed",
+      target: siteHealth.url,
+      details: siteHealth.error || `HTTP ${siteHealth.statusCode || "unknown"}`,
+      fixed: false
+    });
+  }
+
+  const cnamePath = path.join(ROOT_DIR, "CNAME");
+  const cnameValue = (await fs.readFile(cnamePath, "utf8").catch(() => "")).trim();
+  if (domainName && cnameValue && cnameValue !== domainName) {
+    findings.push({
+      fingerprint: buildFindingFingerprint("cname", cnameValue),
+      category: "deployment",
+      severity: "medium",
+      status: "open",
+      title: "CNAME does not match configured domain",
+      target: "CNAME",
+      details: `CNAME=${cnameValue}, expected ${domainName}`,
+      fixed: false
+    });
+  }
+
+  securityFindingsCache = findings;
+  managerStatusCache = {
+    ...managerStatusCache,
+    repoStatus,
+    siteHealth,
+    lastSecurityScanAt: nowIso(),
+    lastSecurityScanTrigger: trigger,
+    lastSecurityScanSummary: {
+      critical: findings.filter((finding) => finding.severity === "critical").length,
+      high: findings.filter((finding) => finding.severity === "high").length,
+      fixed: findings.filter((finding) => finding.fixed).length,
+      total: findings.length
+    }
+  };
+
+  await recordManagerActivity("security-scan", `Security scan completed via ${trigger}.`, managerStatusCache.lastSecurityScanSummary);
+
+  for (const finding of findings) {
+    if (finding.severity !== "critical") {
+      continue;
+    }
+    if (priorCriticalFingerprints.has(finding.fingerprint)) {
+      continue;
+    }
+    notifyWindowsDesktop("Website Manager Bot", `${finding.title} (${finding.target})`);
+  }
+
+  return {
+    findings,
+    repoStatus,
+    siteHealth,
+    summary: managerStatusCache.lastSecurityScanSummary
+  };
+}
+
+function scheduleSecurityScan() {
+  if (securityScanTimer) {
+    clearInterval(securityScanTimer);
+    securityScanTimer = null;
+  }
+
+  const intervalMinutes =
+    Number(settingsCache && settingsCache.opsManager && settingsCache.opsManager.securityScanIntervalMinutes) || 60;
+  securityScanTimer = setInterval(() => {
+    runSecurityScan("scheduled").catch((error) => {
+      recordManagerActivity("security-error", "Scheduled security scan failed.", {
+        error: safeString(error.message, "Unknown scan error")
+      }).catch(() => {});
+    });
+  }, intervalMinutes * 60 * 1000);
+}
+
+async function buildOperatorContext(prompt) {
+  const repoRoot = getManagedRepoPath();
+  const files = await walkFiles(repoRoot, {
+    ignoreNames: new Set([".git", "node_modules", "logs", "data", "manager-app"])
+  });
+  const allowedExtensions = new Set([".js", ".json", ".html", ".css", ".md"]);
+  const tokens = Array.from(
+    new Set((safeString(prompt, "").toLowerCase().match(/[a-z0-9][a-z0-9_-]{2,}/g) || []).slice(0, 20))
+  );
+
+  const candidates = files
+    .filter((filePath) => allowedExtensions.has(path.extname(filePath).toLowerCase()))
+    .map((filePath) => {
+      const relativePath = path.relative(repoRoot, filePath).replaceAll("\\", "/");
+      const lowerPath = relativePath.toLowerCase();
+      const score = tokens.reduce((total, token) => total + (lowerPath.includes(token) ? 3 : 0), 0) +
+        (/^(server\.js|package\.json|public\/admin\/admin\.js|public\/admin\/index\.html|public\/contact\.js)$/.test(lowerPath) ? 2 : 0);
+      return { filePath, relativePath, score };
+    })
+    .sort((left, right) => right.score - left.score || left.relativePath.localeCompare(right.relativePath))
+    .slice(0, 8);
+
+  const snippets = [];
+  for (const item of candidates) {
+    const contents = await fs.readFile(item.filePath, "utf8").catch(() => "");
+    snippets.push({
+      path: item.relativePath,
+      content: truncate(contents, 12000)
+    });
+  }
+
+  return {
+    repoStatus: await collectRepoStatus(),
+    fileSnippets: snippets
+  };
+}
+
+function extractOperatorText(payload) {
+  if (payload && typeof payload.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+
+  const output = Array.isArray(payload && payload.output) ? payload.output : [];
+  const texts = [];
+  for (const item of output) {
+    const content = Array.isArray(item && item.content) ? item.content : [];
+    for (const block of content) {
+      if (block && typeof block.text === "string") {
+        texts.push(block.text);
+      }
+      if (block && typeof block.output_text === "string") {
+        texts.push(block.output_text);
+      }
+    }
+  }
+
+  return texts.join("\n").trim();
+}
+
+function parseOperatorPayload(text) {
+  const rawText = safeString(text, "").trim();
+  if (!rawText) {
+    throw new Error("Operator returned an empty response.");
+  }
+
+  const fencedMatch = rawText.match(/```(?:json)?\s*([\s\S]+?)```/i);
+  const candidate = fencedMatch ? fencedMatch[1].trim() : rawText;
+  const parsed = safeParseJson(candidate, null);
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("Operator response was not valid JSON.");
+  }
+
+  return {
+    summary: truncate(safeString(parsed.summary, ""), 2000),
+    plan: Array.isArray(parsed.plan) ? parsed.plan.map((item) => truncate(safeString(item, ""), 400)).filter(Boolean).slice(0, 20) : [],
+    warnings: Array.isArray(parsed.warnings)
+      ? parsed.warnings.map((item) => truncate(safeString(item, ""), 300)).filter(Boolean).slice(0, 20)
+      : [],
+    actions: Array.isArray(parsed.actions)
+      ? parsed.actions
+          .filter((item) => item && typeof item === "object")
+          .map((item) => ({
+            type: truncate(safeString(item.type, "write_file"), 40),
+            path: truncate(safeString(item.path, ""), 240),
+            content: safeString(item.content, ""),
+            reason: truncate(safeString(item.reason, ""), 300)
+          }))
+          .slice(0, 12)
+      : []
+  };
+}
+
+async function askOperator(prompt, mode = "plan") {
+  const apiKey = safeString(secretsCache && secretsCache.apiKeys && secretsCache.apiKeys.openai, "").trim();
+  if (!apiKey) {
+    throw new Error("OpenAI API key is not configured in admin settings.");
+  }
+
+  const context = await buildOperatorContext(prompt);
+  const systemPrompt = [
+    safeString(settingsCache && settingsCache.opsManager && settingsCache.opsManager.operatorSystemPrompt, ""),
+    "Return valid JSON only.",
+    'Schema: {"summary":"string","plan":["string"],"warnings":["string"],"actions":[{"type":"write_file","path":"relative/path","content":"full file contents","reason":"why"}]}',
+    mode === "apply"
+      ? "If a file change is needed, include one or more write_file actions with complete final file contents."
+      : "Do not include file writes unless the user explicitly asks to prepare them."
+  ].join("\n");
+
+  const userPrompt = JSON.stringify(
+    {
+      mode,
+      prompt,
+      repoStatus: context.repoStatus,
+      fileSnippets: context.fileSnippets
+    },
+    null,
+    2
+  );
+
+  const baseUrl = safeString(settingsCache && settingsCache.opsManager && settingsCache.opsManager.operatorBaseUrl, "").replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}/responses`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: safeString(settingsCache.opsManager.operatorModel, "gpt-5"),
+      input: [
+        {
+          role: "system",
+          content: [{ type: "input_text", text: systemPrompt }]
+        },
+        {
+          role: "user",
+          content: [{ type: "input_text", text: userPrompt }]
+        }
+      ]
+    }),
+    signal: AbortSignal.timeout(60000)
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const message =
+      safeString(payload && payload.error && payload.error.message, "") ||
+      safeString(payload && payload.error, "") ||
+      "Operator request failed.";
+    throw new Error(message);
+  }
+
+  return parseOperatorPayload(extractOperatorText(payload));
+}
+
+async function applyOperatorActions(actions) {
+  const repoRoot = getManagedRepoPath();
+  const backupRoot = path.join(DATA_DIR, "operator-backups", `${Date.now()}`);
+  const applied = [];
+
+  for (const action of actions) {
+    if (action.type !== "write_file") {
+      continue;
+    }
+    if (!action.path) {
+      continue;
+    }
+    const targetPath = path.join(repoRoot, action.path);
+    if (!pathInside(repoRoot, targetPath)) {
+      throw new Error(`Operator attempted to write outside the managed repo: ${action.path}`);
+    }
+
+    const existing = await fs.readFile(targetPath, "utf8").catch(() => null);
+    if (existing !== null) {
+      const backupPath = path.join(backupRoot, action.path);
+      await fs.mkdir(path.dirname(backupPath), { recursive: true });
+      await fs.writeFile(backupPath, existing, "utf8");
+    }
+
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await fs.writeFile(targetPath, action.content, "utf8");
+    applied.push({
+      path: action.path,
+      reason: action.reason || "",
+      hadExistingFile: existing !== null
+    });
+  }
+
+  return applied;
 }
 
 async function appendLog(logName, payload, req = null) {
@@ -1205,6 +2110,7 @@ async function buildAdminStats() {
       queueTotal: supportRequestsCache.length,
       queueNew: supportRequestsCache.filter((item) => item.status === "new").length,
       queueInProgress: supportRequestsCache.filter((item) => item.status === "in_progress").length,
+      queueWaitingOnOwner: supportRequestsCache.filter((item) => item.status === "waiting_on_owner").length,
       queueClosed: supportRequestsCache.filter((item) => item.status === "closed").length
     },
     coupons: {
@@ -1517,6 +2423,48 @@ function applySecurityHeaders(req, res, next) {
 
   if (COOKIE_SECURE && req.secure) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
+
+  next();
+}
+
+function isAllowedCorsOrigin(origin) {
+  const raw = safeString(origin, "").trim();
+  if (!raw) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(raw);
+    const protocol = parsed.protocol.toLowerCase();
+    const host = parsed.hostname.toLowerCase();
+    if (protocol !== "https:" && protocol !== "http:") {
+      return false;
+    }
+    if (host === "slendystuff.com" || host === "www.slendystuff.com" || host === "api.slendystuff.com" || host === "ops.slendystuff.com") {
+      return true;
+    }
+    if ((host === "localhost" || host === "127.0.0.1") && parsed.port === String(PORT)) {
+      return true;
+    }
+    return host.endsWith(".github.io");
+  } catch {
+    return false;
+  }
+}
+
+function applyCors(req, res, next) {
+  const origin = safeString(req.headers.origin, "").trim();
+  if (isAllowedCorsOrigin(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-csrf-token");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,OPTIONS");
+  }
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
   }
 
   next();
@@ -2102,6 +3050,7 @@ const accountRateLimiter = createRateLimiter({ ...ACCOUNT_RATE_LIMIT, keyPrefix:
 const checkoutRateLimiter = createRateLimiter({ ...CHECKOUT_RATE_LIMIT, keyPrefix: "checkout" });
 
 app.use(applySecurityHeaders);
+app.use(applyCors);
 app.use(cookieParser());
 app.use(express.json({ limit: "256kb" }));
 
@@ -2232,10 +3181,53 @@ app.post("/api/support/request", supportRateLimiter, async (req, res) => {
     supportRequestsCache = [requestDetails, ...supportRequestsCache].slice(0, 5000);
     await saveJson(SUPPORT_REQUESTS_PATH, supportRequestsCache);
     await appendLog("support-request", requestDetails, req);
+    await recordManagerActivity("support-request", `New support request from ${requestDetails.email || requestDetails.name}.`, {
+      requestId: requestDetails.id,
+      email: requestDetails.email,
+      status: requestDetails.status
+    });
+    notifyWindowsDesktop("New Support Request", `${requestDetails.name || "Anonymous"} sent a support request.`);
 
     res.json({ ok: true, message: "Support request captured." });
   } catch (error) {
     res.status(500).json({ ok: false, error: safeString(error.message, "Support request failure") });
+  }
+});
+
+app.post("/api/contact-message", supportRateLimiter, async (req, res) => {
+  try {
+    const messageDetails = normalizeContactMessage({
+      id: crypto.randomBytes(8).toString("hex"),
+      name: truncate(safeString(req.body.name, "Anonymous"), 120),
+      email: normalizeEmail(req.body.email),
+      subject: truncate(safeString(req.body.subject, ""), 200),
+      preferredContact: truncate(safeString(req.body.preferredContact, "email"), 40),
+      discordUsername: truncate(safeString(req.body.discordUsername, ""), 80),
+      message: truncate(safeString(req.body.message, ""), 4000),
+      clientTimezone: truncate(safeString(req.body.clientTimezone, ""), 80),
+      status: "new",
+      adminNotes: "",
+      createdAt: nowIso(),
+      updatedAt: nowIso()
+    });
+
+    if (messageDetails.subject.length < 3 || messageDetails.message.length < 8) {
+      return res.status(400).json({ ok: false, error: "Subject and message are required." });
+    }
+
+    contactMessagesCache = [messageDetails, ...contactMessagesCache].slice(0, 5000);
+    await saveJson(CONTACT_MESSAGES_PATH, contactMessagesCache);
+    await appendLog("contact-message", messageDetails, req);
+    await recordManagerActivity("contact-message", `New contact message from ${messageDetails.email || messageDetails.name}.`, {
+      messageId: messageDetails.id,
+      email: messageDetails.email,
+      subject: messageDetails.subject
+    });
+    notifyWindowsDesktop("New Contact Message", `${messageDetails.name || "Anonymous"} sent "${messageDetails.subject}".`);
+
+    return res.json({ ok: true, message: "Contact message captured." });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Contact message failure") });
   }
 });
 
@@ -2316,6 +3308,39 @@ app.get("/api/account/session", (req, res) => {
   }
 
   return res.json({ ok: true, account: sanitizeAccountForAdmin(payload.account) });
+});
+
+app.get("/api/account/summary", (req, res) => {
+  const payload = getAccountSessionFromRequest(req);
+  if (!payload || !payload.account) {
+    return res.status(401).json({ ok: false, error: "Not signed in." });
+  }
+
+  const account = payload.account;
+  const supportRequests = supportRequestsCache
+    .filter((item) => normalizeEmail(item.email) === account.email)
+    .map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      serviceLevel: item.serviceLevel || "support",
+      billingStatus: item.billingStatus || "paid_support_required",
+      status: item.status || "new"
+    }))
+    .slice(0, 50);
+
+  return res.json({
+    ok: true,
+    user: {
+      ...sanitizeAccountForAdmin(account),
+      purchases: [],
+      supportRequests
+    },
+    eligibility: {
+      eligible: false,
+      reason: "No qualifying purchase recorded on this backend yet.",
+      freeSupportUntil: null
+    }
+  });
 });
 
 app.post("/api/account/logout", (req, res) => {
@@ -2659,12 +3684,139 @@ app.patch("/api/admin/support-requests/:id", requireAdmin, requireAdminCsrf, asy
   }
 });
 
+app.get("/api/admin/contact-messages", requireAdmin, (_req, res) => {
+  res.json({
+    ok: true,
+    messages: contactMessagesCache
+  });
+});
+
+app.patch("/api/admin/contact-messages/:id", requireAdmin, requireAdminCsrf, async (req, res) => {
+  try {
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const messageId = truncate(safeString(req.params.id, ""), 24);
+    const index = contactMessagesCache.findIndex((item) => item.id === messageId);
+    if (index < 0) {
+      return res.status(404).json({ ok: false, error: "Contact message not found." });
+    }
+
+    const current = contactMessagesCache[index];
+    const updated = normalizeContactMessage({
+      ...current,
+      status: normalizeContactMessageStatus(body.status || current.status),
+      adminNotes: truncate(safeString(body.adminNotes, current.adminNotes), 1200),
+      updatedAt: nowIso()
+    });
+
+    contactMessagesCache[index] = updated;
+    await saveJson(CONTACT_MESSAGES_PATH, contactMessagesCache);
+    await appendLog("contact-message-admin-update", {
+      messageId,
+      status: updated.status,
+      hasAdminNotes: Boolean(updated.adminNotes)
+    });
+
+    return res.json({ ok: true, message: updated });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Failed to update contact message") });
+  }
+});
+
+app.get("/api/admin/manager/status", requireAdmin, async (_req, res) => {
+  try {
+    const repoStatus = managerStatusCache.repoStatus || (await collectRepoStatus());
+    const siteHealth =
+      managerStatusCache.siteHealth ||
+      (settingsCache.opsManager.domainName ? await fetchSiteHealth(`https://${settingsCache.opsManager.domainName}`) : null);
+
+    return res.json({
+      ok: true,
+      manager: {
+        repoStatus,
+        siteHealth,
+        recentActivity: managerActivityCache.slice(0, 50),
+        securityFindings: securityFindingsCache.slice(0, 50),
+        lastSecurityScanAt: managerStatusCache.lastSecurityScanAt,
+        lastSecurityScanTrigger: managerStatusCache.lastSecurityScanTrigger,
+        lastSecurityScanSummary: managerStatusCache.lastSecurityScanSummary,
+        lastOperatorRunAt: managerStatusCache.lastOperatorRunAt,
+        lastOperatorSummary: managerStatusCache.lastOperatorSummary,
+        queues: {
+          supportTotal: supportRequestsCache.length,
+          supportNew: supportRequestsCache.filter((item) => item.status === "new").length,
+          supportWaitingOnOwner: supportRequestsCache.filter((item) => item.status === "waiting_on_owner").length,
+          contactTotal: contactMessagesCache.length,
+          contactNew: contactMessagesCache.filter((item) => item.status === "new").length,
+          contactWaitingOnOwner: contactMessagesCache.filter((item) => item.status === "waiting_on_owner").length
+        },
+        readiness: buildPhaseOneReadiness()
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Failed to load manager status") });
+  }
+});
+
+app.post("/api/admin/manager/security-scan", requireAdmin, requireAdminCsrf, async (_req, res) => {
+  try {
+    const result = await runSecurityScan("manual");
+    return res.json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Security scan failed") });
+  }
+});
+
+app.post("/api/admin/operator/ask", requireAdmin, requireAdminCsrf, async (req, res) => {
+  try {
+    const prompt = truncate(safeString(req.body && req.body.prompt, "").trim(), 5000);
+    if (!prompt) {
+      return res.status(400).json({ ok: false, error: "Prompt is required." });
+    }
+
+    const result = await askOperator(prompt, "plan");
+    managerStatusCache.lastOperatorRunAt = nowIso();
+    managerStatusCache.lastOperatorSummary = result.summary;
+    await recordManagerActivity("operator-plan", "Operator generated a plan.", {
+      hasActions: result.actions.length > 0,
+      planSteps: result.plan.length
+    });
+    return res.json({ ok: true, result });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Operator request failed") });
+  }
+});
+
+app.post("/api/admin/operator/apply", requireAdmin, requireAdminCsrf, async (req, res) => {
+  try {
+    const prompt = truncate(safeString(req.body && req.body.prompt, "").trim(), 5000);
+    if (!prompt) {
+      return res.status(400).json({ ok: false, error: "Prompt is required." });
+    }
+    if (!settingsCache.opsManager.operatorFullAccess) {
+      return res.status(403).json({ ok: false, error: "Operator full access is disabled in settings." });
+    }
+
+    const result = await askOperator(prompt, "apply");
+    const applied = await applyOperatorActions(result.actions);
+    managerStatusCache.lastOperatorRunAt = nowIso();
+    managerStatusCache.lastOperatorSummary = result.summary;
+    await recordManagerActivity("operator-apply", "Operator applied file changes.", {
+      appliedCount: applied.length
+    });
+    notifyWindowsDesktop("Operator Applied Changes", `${applied.length} file(s) were updated in the managed repo.`);
+    return res.json({ ok: true, result, applied });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: safeString(error.message, "Operator apply failed") });
+  }
+});
+
 app.put("/api/admin/settings", requireAdmin, requireAdminCsrf, async (req, res) => {
   try {
     const nextSettings = normalizeSettings(req.body.settings || settingsCache);
     const nextSecrets = normalizeSecrets(req.body.secrets || secretsCache);
 
     await saveSettingsAndSecrets({ settings: nextSettings, secrets: nextSecrets });
+    scheduleSecurityScan();
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ ok: false, error: safeString(error.message, "Failed to save settings") });
@@ -2711,7 +3863,9 @@ async function start() {
 
   await initData();
   scheduleAnydeskRefresh();
+  scheduleSecurityScan();
   await refreshAnydeskLink("startup");
+  await runSecurityScan("startup");
 
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);

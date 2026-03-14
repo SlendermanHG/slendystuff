@@ -17,7 +17,7 @@
     "supportEmail": "admin@slendystuff.com",
     "anydeskSourceUrl": "https://download.anydesk.com/AnyDesk.exe",
     "anydeskDownloadUrl": "https://download.anydesk.com/AnyDesk.exe",
-    "anydeskLastCheckedAt": "2026-03-11T04:01:17.152Z",
+    "anydeskLastCheckedAt": "2026-03-14T05:15:41.874Z",
     "anydeskLastModified": "Fri, 13 Feb 2026 09:44:10 GMT",
     "anydeskContentLength": "8044472",
     "refreshIntervalHours": 12,
@@ -26,6 +26,31 @@
   },
   "analytics": {
     "customTrackingEnabled": true
+  },
+  "opsManager": {
+    "enabled": true,
+    "githubRepo": "SlendermanHG/slendystuff.com",
+    "defaultBranch": "main",
+    "managedRepoPath": "C:\\Slendystuff\\managed-site",
+    "domainName": "slendystuff.com",
+    "apiSubdomain": "api.slendystuff.com",
+    "opsSubdomain": "ops.slendystuff.com",
+    "domainProvider": "Squarespace",
+    "dnsNotes": "Squarespace is managing the DNS zone for slendystuff.com.",
+    "alertEmail": "siteadmin@slendystuff.com",
+    "nativeWindowsNotifications": true,
+    "browserNotifications": true,
+    "securityScanIntervalMinutes": 60,
+    "criticalReminderMinutes": 15,
+    "normalReminderMinutes": 60,
+    "autoFixCritical": true,
+    "cloudflareEnabled": true,
+    "localOwnerConsoleEnabled": true,
+    "sensitiveTextApprovalsRequireCode": true,
+    "operatorBaseUrl": "https://api.openai.com/v1",
+    "operatorModel": "gpt-5",
+    "operatorFullAccess": true,
+    "operatorSystemPrompt": "You are the Slendy Stuff website operator. Prefer minimal, production-safe changes. If asked to write files, return complete file contents."
   },
   "coupons": [
     {
@@ -46,6 +71,7 @@
       "category": "Programs",
       "summary": "Speed up checkout and daily operations with a cleaner point-of-sale experience.",
       "priceLabel": "Custom Pricing",
+      "priceCents": 2900,
       "ctaLabel": "Request Details",
       "ctaUrl": "mailto:admin@slendystuff.com?subject=POS%20Suite%20Inquiry",
       "requires18Plus": false
@@ -56,6 +82,7 @@
       "category": "Programs",
       "summary": "Improve speed and stability on your Windows system with focused optimization tools.",
       "priceLabel": "Custom Pricing",
+      "priceCents": 4900,
       "ctaLabel": "Request Details",
       "ctaUrl": "mailto:admin@slendystuff.com?subject=System%20Optimizer%20Inquiry",
       "requires18Plus": false
@@ -66,6 +93,7 @@
       "category": "Bots",
       "summary": "Automate moderation, alerts, and routine tasks so your community runs smoothly.",
       "priceLabel": "From $19.99",
+      "priceCents": 1999,
       "ctaLabel": "View Options",
       "ctaUrl": "mailto:admin@slendystuff.com?subject=Discord%20Bot%20Inquiry",
       "requires18Plus": false
@@ -76,6 +104,7 @@
       "category": "Bots",
       "summary": "Managed remote automation for approved use cases with defined safeguards.",
       "priceLabel": "Custom Pricing",
+      "priceCents": 5900,
       "ctaLabel": "View Details",
       "ctaUrl": "mailto:admin@slendystuff.com?subject=Remote%20Control%20Bot%20Inquiry",
       "requires18Plus": true
